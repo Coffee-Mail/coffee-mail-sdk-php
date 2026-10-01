@@ -1,0 +1,46 @@
+{
+  "name": "coffeemail/coffeemail-php",
+  "description": "SDK oficial do CoffeeMail para PHP moderno (8.2+). Envio transacional de e-mails, templates, domínios e webhooks com tipagem estrita e retorno seguro.",
+  "type": "library",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "CoffeeMail Team",
+      "email": "contato@coffeemail.com.br"
+    }
+  ],
+  "require": {
+    "php": "^8.2",
+    "ext-curl": "*",
+    "ext-json": "*"
+  },
+  "require-dev": {
+    "pestphp/pest": "^3.0 || ^2.34"
+  },
+  "autoload": {
+    "psr-4": {
+      "CoffeeMail\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "CoffeeMail\\Tests\\": "tests/"
+    }
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
+    }
+  },
+  "scripts": {
+    "test": "pest",
+    "analyse": "phpstan analyse --memory-limit=512M",
+    "check": [
+      "@analyse",
+      "@test"
+    ]
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
