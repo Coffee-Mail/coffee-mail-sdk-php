@@ -6,6 +6,7 @@ namespace CoffeeMail\Resources;
 
 use CoffeeMail\Http\CoffeeMailResponse;
 use CoffeeMail\Http\HttpTransportInterface;
+use CoffeeMail\Payloads\WebhookPayload;
 
 final readonly class Webhooks
 {
@@ -16,12 +17,14 @@ final readonly class Webhooks
     /**
      * Cadastra um novo endpoint de webhook na plataforma.
      *
-     * @param array<string, mixed> $payload
+     * @param array<string, mixed>|WebhookPayload $payload
      * @return CoffeeMailResponse<mixed>
      */
-    public function create(array $payload): CoffeeMailResponse
+    public function create(array|WebhookPayload $payload): CoffeeMailResponse
     {
-        return $this->http->post('/v1/product/webhooks', $payload);
+        $data = $payload instanceof WebhookPayload ? $payload->toArray() : $payload;
+
+        return $this->http->post('/v1/product/webhooks', $data);
     }
 
     /**

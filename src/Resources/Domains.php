@@ -6,6 +6,7 @@ namespace CoffeeMail\Resources;
 
 use CoffeeMail\Http\CoffeeMailResponse;
 use CoffeeMail\Http\HttpTransportInterface;
+use CoffeeMail\Payloads\DomainPayload;
 
 final readonly class Domains
 {
@@ -16,12 +17,14 @@ final readonly class Domains
     /**
      * Cadastra um novo domínio na organização para envio de e-mails.
      *
-     * @param array<string, mixed> $payload
+     * @param array<string, mixed>|DomainPayload $payload
      * @return CoffeeMailResponse<mixed>
      */
-    public function create(array $payload): CoffeeMailResponse
+    public function create(array|DomainPayload $payload): CoffeeMailResponse
     {
-        return $this->http->post('/v1/product/domains', $payload);
+        $data = $payload instanceof DomainPayload ? $payload->toArray() : $payload;
+
+        return $this->http->post('/v1/product/domains', $data);
     }
 
     /**

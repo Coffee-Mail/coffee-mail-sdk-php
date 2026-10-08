@@ -7,6 +7,8 @@ namespace CoffeeMail\Resources;
 use CoffeeMail\Exceptions\ValidationError;
 use CoffeeMail\Http\CoffeeMailResponse;
 use CoffeeMail\Http\HttpTransportInterface;
+use CoffeeMail\Payloads\AttachmentPayload;
+use CoffeeMail\Payloads\EmailPayload;
 use DateTimeInterface;
 
 final readonly class Emails
@@ -18,13 +20,14 @@ final readonly class Emails
     /**
      * Dispara um e-mail transacional único.
      *
-     * @param array<string, mixed> $payload
+     * @param array<string, mixed>|EmailPayload $payload
      * @return CoffeeMailResponse<mixed>
      */
-    public function send(array $payload): CoffeeMailResponse
+    public function send(array|EmailPayload $payload): CoffeeMailResponse
     {
-        $body = $this->formatSendBody($payload);
-        $headers = $this->formatSendHeaders($payload);
+        $rawPayload = $payload instanceof EmailPayload ? $payload->toArray() : $payload;
+        $body = $this->formatSendBody($rawPayload);
+        $headers = $this->formatSendHeaders($rawPayload);
 
         return $this->http->post('/v1/product/emails', $body, headers: $headers);
     }
@@ -32,15 +35,21 @@ final readonly class Emails
     /**
      * Envia múltiplos e-mails transacionais em lote (batch).
      *
-     * @param list<array<string, mixed>> $items
+     * @param list<array<string, mixed>|EmailPayload> $items
      * @return CoffeeMailResponse<mixed>
      */
     public function sendBatch(array $items): CoffeeMailResponse
     {
-        $formattedItems = array_map(fn (array $item): array => $this->formatSendBody($item), $items);
+        /** @var list<array<string, mixed>> $normalizedItems */
+        $normalizedItems = array_map(
+            static fn (mixed $item): array => $item instanceof EmailPayload ? $item->toArray() : (array) $item,
+            $items,
+        );
+
+        $formattedItems = array_map(fn (array $item): array => $this->formatSendBody($item), $normalizedItems);
         $batchHeaders = [];
 
-        foreach ($items as $item) {
+        foreach ($normalizedItems as $item) {
             $batchHeaders = array_merge($batchHeaders, $this->formatSendHeaders($item));
         }
 
@@ -240,24 +249,26 @@ final readonly class Emails
         $result = [];
 
         foreach ($attachments as $att) {
-            if (! is_array($att) || ! isset($att['filename'], $att['content'])) {
+            $attData = $att instanceof AttachmentPayload ? $att->toArray() : $att;
+
+            if (! is_array($attData) || ! isset($attData['filename'], $attData['content'])) {
                 continue;
             }
 
-            $rawContent = $att['content'];
+            $rawContent = $attData['content'];
             $encodedContent = is_string($rawContent)
                 ? (base64_encode(base64_decode($rawContent, true) ?: '') === $rawContent ? $rawContent : base64_encode($rawContent))
                 : base64_encode((string) $rawContent);
 
             $item = [
-                'filename' => (string) $att['filename'],
+                'filename' => (string) $attData['filename'],
                 'content' => $encodedContent,
-                'contentType' => isset($att['contentType']) ? (string) $att['contentType'] : 'application/octet-stream',
-                'disposition' => isset($att['disposition']) ? (string) $att['disposition'] : 'attachment',
+                'contentType' => isset($attData['contentType']) ? (string) $attData['contentType'] : 'application/octet-stream',
+                'disposition' => isset($attData['disposition']) ? (string) $attData['disposition'] : 'attachment',
             ];
 
-            if (isset($att['cid']) && is_string($att['cid'])) {
-                $item['cid'] = $att['cid'];
+            if (isset($attData['cid']) && is_string($attData['cid'])) {
+                $item['cid'] = $attData['cid'];
             }
 
             $result[] = $item;
