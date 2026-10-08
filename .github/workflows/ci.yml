@@ -38,7 +38,7 @@ jobs:
             composer-${{ matrix.php }}-
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
+        run: composer update --prefer-dist --no-progress
 
       - name: Code standards (phpcs)
         run: composer lint
