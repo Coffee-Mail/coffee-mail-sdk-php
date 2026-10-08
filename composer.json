@@ -36,7 +36,10 @@
   "scripts": {
     "test": "pest",
     "analyse": "phpstan analyse --memory-limit=512M",
+    "lint": "phpcs",
+    "format": "phpcbf",
     "check": [
+      "@lint",
       "@analyse",
       "@test"
     ]

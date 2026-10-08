@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace CoffeeMail\Payloads;
 
-final readonly class DomainPayload implements PayloadInterface
+final class DomainPayload implements PayloadInterface
 {
     public function __construct(
-        public string $name,
+        public readonly string $name,
     ) {
     }
 

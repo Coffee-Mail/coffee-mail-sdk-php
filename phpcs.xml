@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<ruleset name="CoffeeMail PHP SDK">
+    <description>Regras de estilo e padrões de código PSR-12 para o SDK PHP do CoffeeMail.</description>
+
+    <file>src</file>
+    <file>tests</file>
+
+    <arg name="colors"/>
+    <arg value="p"/>
+
+    <rule ref="PSR12"/>
+</ruleset>

@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace CoffeeMail\Payloads;
 
-final readonly class WebhookPayload implements PayloadInterface
+final class WebhookPayload implements PayloadInterface
 {
     /**
      * @param list<string> $events
      */
     public function __construct(
-        public string $url,
-        public array $events,
-        public ?string $name = null,
-        public ?string $description = null,
+        public readonly string $url,
+        public readonly array $events,
+        public readonly ?string $name = null,
+        public readonly ?string $description = null,
     ) {
     }
 

@@ -91,24 +91,13 @@ test('DomainPayload and WebhookPayload convert properly to array', function (): 
 });
 
 test('Emails resource accepts EmailPayload in send and sendBatch', function (): void {
-    $capturedBody = null;
-
-    $mockTransport = new class($capturedBody) implements HttpTransportInterface {
-        public function __construct(public mixed &$body) {}
-
-        public function request(string $method, string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            $this->body = $body;
-            return new CoffeeMailResponse(data: ['id' => 'eml_dto_123'], error: null, statusCode: 201);
-        }
-
-        public function get(string $path, array $query = [], array $headers = []): CoffeeMailResponse { return $this->request('GET', $path); }
-        public function post(string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse { return $this->request('POST', $path, $body, headers: $headers); }
-        public function put(string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse { return $this->request('PUT', $path, $body); }
-        public function patch(string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse { return $this->request('PATCH', $path, $body); }
-        public function delete(string $path, array $query = [], array $headers = []): CoffeeMailResponse { return $this->request('DELETE', $path); }
-        public function getLocale(): string { return 'pt-BR'; }
-    };
+    $mockTransport = new \CoffeeMail\Tests\Support\FakeTransport(
+        defaultResponse: new CoffeeMailResponse(
+            data: ['id' => 'eml_dto_123'],
+            error: null,
+            statusCode: 201,
+        )
+    );
 
     $client = new CoffeeMail('cm_live_dummy', transport: $mockTransport);
 
@@ -122,15 +111,14 @@ test('Emails resource accepts EmailPayload in send and sendBatch', function (): 
     [$data, $error] = $client->emails->send($payload);
 
     assert(is_array($data));
-    assert(is_array($capturedBody));
+    assert(is_array($mockTransport->lastBody));
 
     expect($error)->toBeNull()
         ->and($data['id'])->toBe('eml_dto_123')
-        ->and($capturedBody['subject'])->toBe('Teste DTO')
-        ->and($capturedBody['to'])->toBe([['email' => 'usuario@gmail.com']]);
+        ->and($mockTransport->lastBody['subject'])->toBe('Teste DTO')
+        ->and($mockTransport->lastBody['to'])->toBe([['email' => 'usuario@gmail.com']]);
 
-    // Teste sendBatch com lista de DTOs
     $client->emails->sendBatch([$payload]);
-    assert(isset($capturedBody[0]) && is_array($capturedBody[0]));
-    expect($capturedBody[0]['subject'])->toBe('Teste DTO');
+    assert(isset($mockTransport->lastBody[0]) && is_array($mockTransport->lastBody[0]));
+    expect($mockTransport->lastBody[0]['subject'])->toBe('Teste DTO');
 });

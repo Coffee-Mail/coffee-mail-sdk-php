@@ -8,10 +8,10 @@ use CoffeeMail\Http\CoffeeMailResponse;
 use CoffeeMail\Http\HttpTransportInterface;
 use CoffeeMail\Payloads\WebhookPayload;
 
-final readonly class Webhooks
+final class Webhooks
 {
     public function __construct(
-        private HttpTransportInterface $http,
+        private readonly HttpTransportInterface $http,
     ) {
     }
 

@@ -7,10 +7,10 @@ namespace CoffeeMail\Resources;
 use CoffeeMail\Http\CoffeeMailResponse;
 use CoffeeMail\Http\HttpTransportInterface;
 
-final readonly class Templates
+final class Templates
 {
     public function __construct(
-        private HttpTransportInterface $http,
+        private readonly HttpTransportInterface $http,
     ) {
     }
 

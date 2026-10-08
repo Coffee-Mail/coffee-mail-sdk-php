@@ -6,12 +6,12 @@ namespace CoffeeMail\Payloads;
 
 use InvalidArgumentException;
 
-final readonly class AttachmentPayload implements PayloadInterface
+final class AttachmentPayload implements PayloadInterface
 {
     public function __construct(
-        public string $filename,
-        public string $content,
-        public ?string $contentType = null,
+        public readonly string $filename,
+        public readonly string $content,
+        public readonly ?string $contentType = null,
     ) {
     }
 

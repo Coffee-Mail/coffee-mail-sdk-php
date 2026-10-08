@@ -16,15 +16,15 @@ use CoffeeMail\Exceptions\RateLimitError;
 use CoffeeMail\Exceptions\ValidationError;
 use CoffeeMail\I18n\I18n;
 
-final readonly class CurlTransport implements HttpTransportInterface
+final class CurlTransport implements HttpTransportInterface
 {
     private const BASE_URL = 'https://api.coffeemail.com.br';
     private const SDK_VERSION = '0.1.0';
 
     public function __construct(
-        private string $apiKey,
-        private string $locale = 'pt-BR',
-        private int $timeoutSeconds = 10,
+        private readonly string $apiKey,
+        private readonly string $locale = 'pt-BR',
+        private readonly int $timeoutSeconds = 10,
     ) {
     }
 

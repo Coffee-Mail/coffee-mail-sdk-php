@@ -14,8 +14,10 @@ final class I18n
      */
     private const MESSAGES = [
         'missing_api_key' => [
-            'pt-BR' => 'Chave de API não informada. Forneça a chave no construtor ou defina a variável COFFEEMAIL_API_KEY.',
-            'en' => 'API key was not provided. Please pass a valid API key to the constructor or set COFFEEMAIL_API_KEY.',
+            'pt-BR' => 'Chave de API não informada. '
+                . 'Forneça a chave no construtor ou defina a variável COFFEEMAIL_API_KEY.',
+            'en' => 'API key was not provided. '
+                . 'Please pass a valid API key to the constructor or set COFFEEMAIL_API_KEY.',
         ],
         'timeout_error' => [
             'pt-BR' => 'A requisição excedeu o tempo limite configurado de {timeoutSeconds}s.',
@@ -46,8 +48,11 @@ final class I18n
     /**
      * @param array<string, string|int|float> $replacements
      */
-    public static function getMessage(string $key, string $locale = self::DEFAULT_LOCALE, array $replacements = []): string
-    {
+    public static function getMessage(
+        string $key,
+        string $locale = self::DEFAULT_LOCALE,
+        array $replacements = [],
+    ): string {
         $normalizedLocale = in_array($locale, self::SUPPORTED_LOCALES, true) ? $locale : self::DEFAULT_LOCALE;
         $entry = self::MESSAGES[$key] ?? null;
 

@@ -49,7 +49,12 @@ interface HttpTransportInterface
      * @param array<string, string> $headers
      * @return CoffeeMailResponse<mixed>
      */
-    public function patch(string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse;
+    public function patch(
+        string $path,
+        ?array $body = null,
+        array $query = [],
+        array $headers = [],
+    ): CoffeeMailResponse;
 
     /**
      * @param array<string, mixed> $query

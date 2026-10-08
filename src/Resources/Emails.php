@@ -11,10 +11,10 @@ use CoffeeMail\Payloads\AttachmentPayload;
 use CoffeeMail\Payloads\EmailPayload;
 use DateTimeInterface;
 
-final readonly class Emails
+final class Emails
 {
     public function __construct(
-        private HttpTransportInterface $http,
+        private readonly HttpTransportInterface $http,
     ) {
     }
 
@@ -214,7 +214,10 @@ final readonly class Emails
             return $normalized;
         }
 
-        throw new ValidationError('Participante de e-mail inválido: esperado string ou array com chave `email`.', $input);
+        throw new ValidationError(
+            'Participante de e-mail inválido: esperado string ou array com chave `email`.',
+            $input
+        );
     }
 
     /**
@@ -257,15 +260,22 @@ final readonly class Emails
             }
 
             $rawContent = $attData['content'];
-            $encodedContent = is_string($rawContent)
-                ? (base64_encode(base64_decode($rawContent, true) ?: '') === $rawContent ? $rawContent : base64_encode($rawContent))
-                : base64_encode((string) $rawContent);
+            $isAlreadyBase64 = is_string($rawContent)
+                && base64_encode(base64_decode($rawContent, true) ?: '') === $rawContent;
+            $encodedContent = $isAlreadyBase64 ? (string) $rawContent : base64_encode((string) $rawContent);
+
+            $contentType = isset($attData['contentType'])
+                ? (string) $attData['contentType']
+                : 'application/octet-stream';
+            $disposition = isset($attData['disposition'])
+                ? (string) $attData['disposition']
+                : 'attachment';
 
             $item = [
                 'filename' => (string) $attData['filename'],
                 'content' => $encodedContent,
-                'contentType' => isset($attData['contentType']) ? (string) $attData['contentType'] : 'application/octet-stream',
-                'disposition' => isset($attData['disposition']) ? (string) $attData['disposition'] : 'attachment',
+                'contentType' => $contentType,
+                'disposition' => $disposition,
             ];
 
             if (isset($attData['cid']) && is_string($attData['cid'])) {

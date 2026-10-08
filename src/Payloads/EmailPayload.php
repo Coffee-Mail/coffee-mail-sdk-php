@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace CoffeeMail\Payloads;
 
-final readonly class EmailPayload implements PayloadInterface
+final class EmailPayload implements PayloadInterface
 {
     /**
      * @param string|array{email: string, name?: string} $from
@@ -17,20 +17,20 @@ final readonly class EmailPayload implements PayloadInterface
      * @param list<string>|array<string, string>|null $tags
      */
     public function __construct(
-        public string|array $from,
-        public string|array $to,
-        public string $subject,
-        public ?string $html = null,
-        public ?string $text = null,
-        public string|array|null $cc = null,
-        public string|array|null $bcc = null,
-        public string|array|null $replyTo = null,
-        public ?array $headers = null,
-        public ?array $attachments = null,
-        public ?array $tags = null,
-        public ?string $idempotencyKey = null,
-        public ?bool $isSandbox = null,
-        public ?string $scheduledAt = null,
+        public readonly string|array $from,
+        public readonly string|array $to,
+        public readonly string $subject,
+        public readonly ?string $html = null,
+        public readonly ?string $text = null,
+        public readonly string|array|null $cc = null,
+        public readonly string|array|null $bcc = null,
+        public readonly string|array|null $replyTo = null,
+        public readonly ?array $headers = null,
+        public readonly ?array $attachments = null,
+        public readonly ?array $tags = null,
+        public readonly ?string $idempotencyKey = null,
+        public readonly ?bool $isSandbox = null,
+        public readonly ?string $scheduledAt = null,
     ) {
     }
 

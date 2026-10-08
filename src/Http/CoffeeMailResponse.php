@@ -12,15 +12,15 @@ use LogicException;
  * @template-covariant T
  * @implements ArrayAccess<int, mixed>
  */
-final readonly class CoffeeMailResponse implements ArrayAccess
+final class CoffeeMailResponse implements ArrayAccess
 {
     /**
      * @param T|null $data
      */
     public function __construct(
-        public mixed $data,
-        public ?CoffeeMailException $error,
-        public int $statusCode,
+        public readonly mixed $data,
+        public readonly ?CoffeeMailException $error,
+        public readonly int $statusCode,
     ) {
     }
 

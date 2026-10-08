@@ -8,10 +8,10 @@ use CoffeeMail\Http\CoffeeMailResponse;
 use CoffeeMail\Http\HttpTransportInterface;
 use CoffeeMail\Payloads\DomainPayload;
 
-final readonly class Domains
+final class Domains
 {
     public function __construct(
-        private HttpTransportInterface $http,
+        private readonly HttpTransportInterface $http,
     ) {
     }
 

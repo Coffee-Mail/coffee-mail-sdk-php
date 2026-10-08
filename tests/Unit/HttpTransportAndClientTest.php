@@ -5,9 +5,9 @@ declare(strict_types=1);
 use CoffeeMail\CoffeeMail;
 use CoffeeMail\Exceptions\AuthenticationError;
 use CoffeeMail\Exceptions\NotFoundError;
-use CoffeeMail\Exceptions\RateLimitError;
 use CoffeeMail\Http\CoffeeMailResponse;
-use CoffeeMail\Http\HttpTransportInterface;
+use CoffeeMail\I18n\I18n;
+use CoffeeMail\Tests\Support\FakeTransport;
 
 test('client initialization throws AuthenticationError when no api key is provided', function (): void {
     putenv('COFFEEMAIL_API_KEY'); // limpa env
@@ -27,46 +27,13 @@ test('client initialization loads api key from environment variable when omitted
 });
 
 test('client maps 404 response to NotFoundError in envelope', function (): void {
-    $mockTransport = new class implements HttpTransportInterface {
-        public function request(string $method, string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            return new CoffeeMailResponse(
-                data: null,
-                error: new NotFoundError('E-mail não encontrado'),
-                statusCode: 404,
-            );
-        }
-
-        public function get(string $path, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            return $this->request('GET', $path, null, $query, $headers);
-        }
-
-        public function post(string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            return $this->request('POST', $path, $body, $query, $headers);
-        }
-
-        public function put(string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            return $this->request('PUT', $path, $body, $query, $headers);
-        }
-
-        public function patch(string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            return $this->request('PATCH', $path, $body, $query, $headers);
-        }
-
-        public function delete(string $path, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            return $this->request('DELETE', $path, null, $query, $headers);
-        }
-
-        public function getLocale(): string
-        {
-            return 'pt-BR';
-        }
-    };
+    $mockTransport = new FakeTransport(
+        defaultResponse: new CoffeeMailResponse(
+            data: null,
+            error: new NotFoundError('E-mail não encontrado'),
+            statusCode: 404,
+        )
+    );
 
     $client = new CoffeeMail('cm_live_dummy', transport: $mockTransport);
     $response = $client->getTransport()->get('/v1/product/emails/eml_nao_existe');
@@ -78,63 +45,25 @@ test('client maps 404 response to NotFoundError in envelope', function (): void 
 });
 
 test('client introspection caches successful response and can be invalidated', function (): void {
-    $callCount = 0;
-
-    $mockTransport = new class($callCount) implements HttpTransportInterface {
-        public function __construct(public int &$calls) {}
-
-        public function request(string $method, string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            $this->calls++;
-            return new CoffeeMailResponse(
-                data: ['id' => 'key_123', 'name' => 'Producao', 'scopes' => ['emails:send']],
-                error: null,
-                statusCode: 200,
-            );
-        }
-
-        public function get(string $path, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            return $this->request('GET', $path, null, $query, $headers);
-        }
-
-        public function post(string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            return $this->request('POST', $path, $body, $query, $headers);
-        }
-
-        public function put(string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            return $this->request('PUT', $path, $body, $query, $headers);
-        }
-
-        public function patch(string $path, ?array $body = null, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            return $this->request('PATCH', $path, $body, $query, $headers);
-        }
-
-        public function delete(string $path, array $query = [], array $headers = []): CoffeeMailResponse
-        {
-            return $this->request('DELETE', $path, null, $query, $headers);
-        }
-
-        public function getLocale(): string
-        {
-            return 'pt-BR';
-        }
-    };
+    $mockTransport = new FakeTransport(
+        defaultResponse: new CoffeeMailResponse(
+            data: ['id' => 'key_123', 'name' => 'Producao', 'scopes' => ['emails:send']],
+            error: null,
+            statusCode: 200,
+        )
+    );
 
     $client = new CoffeeMail('cm_live_dummy', transport: $mockTransport);
 
     // 1ª chamada: vai no transporte
     $res1 = $client->introspect();
     expect($res1->isSuccess())->toBeTrue()
-        ->and($callCount)->toBe(1);
+        ->and(count($mockTransport->history))->toBe(1);
 
     // 2ª chamada: usa o cache em memória (não incrementa chamadas)
     $res2 = $client->introspect();
     expect($res2->isSuccess())->toBeTrue()
-        ->and($callCount)->toBe(1);
+        ->and(count($mockTransport->history))->toBe(1);
 
     // Invalidação manual do cache
     $client->invalidateApiKeyCache();
@@ -142,7 +71,7 @@ test('client introspection caches successful response and can be invalidated', f
     // 3ª chamada: busca novamente
     $res3 = $client->introspect();
     expect($res3->isSuccess())->toBeTrue()
-        ->and($callCount)->toBe(2);
+        ->and(count($mockTransport->history))->toBe(2);
 });
 
 test('client respects custom locale and reflects it in getLocale', function (): void {
@@ -165,12 +94,12 @@ test('client formats error messages according to selected locale', function (): 
 });
 
 test('I18n utility resolves keys, handles fallbacks and parameter replacements', function (): void {
-    expect(\CoffeeMail\I18n\I18n::getMessage('missing_api_key', 'pt-BR'))
+    expect(I18n::getMessage('missing_api_key', 'pt-BR'))
         ->toContain('Chave de API não informada')
-        ->and(\CoffeeMail\I18n\I18n::getMessage('missing_api_key', 'en'))
+        ->and(I18n::getMessage('missing_api_key', 'en'))
         ->toContain('API key was not provided')
-        ->and(\CoffeeMail\I18n\I18n::getMessage('timeout_error', 'en', ['timeoutSeconds' => 15]))
+        ->and(I18n::getMessage('timeout_error', 'en', ['timeoutSeconds' => 15]))
         ->toBe('The request timed out after 15s.')
-        ->and(\CoffeeMail\I18n\I18n::getMessage('chave_inexistente', 'pt-BR'))
+        ->and(I18n::getMessage('chave_inexistente', 'pt-BR'))
         ->toBe('chave_inexistente');
 });
