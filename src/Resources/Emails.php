@@ -200,24 +200,50 @@ final class Emails
     /**
      * @return array{email: string, name?: string}
      */
+    private function parseParticipantString(string $input): array
+    {
+        $trimmed = trim($input);
+        $hasPattern = (bool) preg_match('/^(?:(?<name>.*?)\s*<)?(?<email>[^<>\s]+)>?$/', $trimmed, $matches);
+        if (!$hasPattern) {
+            return ['email' => $trimmed];
+        }
+
+        $email = trim($matches['email']);
+        $rawName = isset($matches['name']) && $matches['name'] !== ''
+            ? trim(trim($matches['name']), "\"'")
+            : null;
+
+        if ($rawName === null || $rawName === '') {
+            return ['email' => $email];
+        }
+
+        return ['email' => $email, 'name' => $rawName];
+    }
+
+    /**
+     * @return array{email: string, name?: string}
+     */
     private function normalizeParticipant(mixed $input): array
     {
         if (is_string($input)) {
-            return ['email' => trim($input)];
+            return $this->parseParticipantString($input);
         }
 
-        if (is_array($input) && isset($input['email']) && is_string($input['email'])) {
-            $normalized = ['email' => trim($input['email'])];
-            if (isset($input['name']) && is_string($input['name'])) {
-                $normalized['name'] = trim($input['name']);
-            }
-            return $normalized;
+        $isValidArray = is_array($input) && isset($input['email']) && is_string($input['email']);
+        if (!$isValidArray) {
+            throw new ValidationError(
+                'Participante de e-mail inválido: esperado string ou array com chave `email`.',
+                $input
+            );
         }
 
-        throw new ValidationError(
-            'Participante de e-mail inválido: esperado string ou array com chave `email`.',
-            $input
-        );
+        $normalized = ['email' => trim($input['email'])];
+        $hasName = isset($input['name']) && is_string($input['name']);
+        if ($hasName) {
+            $normalized['name'] = trim($input['name']);
+        }
+
+        return $normalized;
     }
 
     /**

@@ -40,6 +40,29 @@ test('emails send normalizes from and to and dispatches to POST /v1/product/emai
         ->and($mockTransport->lastHeaders['x-coffeemail-sandbox'])->toBe('true');
 });
 
+test('emails send normalizes from and to with RFC 5322 names', function (): void {
+    $mockTransport = new FakeTransport(
+        defaultResponse: new CoffeeMailResponse(
+            data: ['id' => 'eml_abc124', 'status' => 'queued'],
+            error: null,
+            statusCode: 201,
+        )
+    );
+
+    $client = new CoffeeMail('cm_live_dummy', transport: $mockTransport);
+
+    [$data, $error] = $client->emails->send([
+        'from' => 'Empresa Exemplo <contato@seudominio.com.br>',
+        'to' => 'Cliente VIP <cliente@gmail.com>',
+        'subject' => 'Assunto Teste',
+        'html' => '<p>Conteúdo</p>',
+    ]);
+
+    expect($error)->toBeNull()
+        ->and($mockTransport->lastBody['from'])->toBe(['email' => 'contato@seudominio.com.br', 'name' => 'Empresa Exemplo'])
+        ->and($mockTransport->lastBody['to'])->toBe([['email' => 'cliente@gmail.com', 'name' => 'Cliente VIP']]);
+});
+
 test('emails resource exposes batch, get, list, cancel, resend, tags and events operations', function (): void {
     $mockTransport = new FakeTransport(
         defaultResponse: new CoffeeMailResponse(
