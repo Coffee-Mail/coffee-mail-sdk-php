@@ -11,7 +11,8 @@ final readonly class Audiences
 {
     public function __construct(
         private HttpTransportInterface $http,
-    ) {}
+    ) {
+    }
 
     /**
      * Cria uma nova audiência (lista de contatos).

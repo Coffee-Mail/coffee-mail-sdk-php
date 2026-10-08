@@ -21,7 +21,8 @@ final readonly class CoffeeMailResponse implements ArrayAccess
         public mixed $data,
         public ?CoffeeMailException $error,
         public int $statusCode,
-    ) {}
+    ) {
+    }
 
     public function isSuccess(): bool
     {

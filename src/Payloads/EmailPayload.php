@@ -31,7 +31,8 @@ final readonly class EmailPayload implements PayloadInterface
         public ?string $idempotencyKey = null,
         public ?bool $isSandbox = null,
         public ?string $scheduledAt = null,
-    ) {}
+    ) {
+    }
 
     /**
      * @param string|array{email: string, name?: string} $from

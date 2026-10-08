@@ -12,7 +12,8 @@ final readonly class Webhooks
 {
     public function __construct(
         private HttpTransportInterface $http,
-    ) {}
+    ) {
+    }
 
     /**
      * Cadastra um novo endpoint de webhook na plataforma.

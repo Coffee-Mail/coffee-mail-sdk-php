@@ -11,7 +11,8 @@ final readonly class Suppressions
 {
     public function __construct(
         private HttpTransportInterface $http,
-    ) {}
+    ) {
+    }
 
     /**
      * Lista a relação de e-mails suprimidos (unsubscribes, hard bounces, reclamações).

@@ -12,7 +12,8 @@ final readonly class AttachmentPayload implements PayloadInterface
         public string $filename,
         public string $content,
         public ?string $contentType = null,
-    ) {}
+    ) {
+    }
 
     /**
      * Cria uma instância de anexo a partir de conteúdo em bytes brutos ou string em disco.

@@ -11,7 +11,8 @@ final readonly class Stats
 {
     public function __construct(
         private HttpTransportInterface $http,
-    ) {}
+    ) {
+    }
 
     /**
      * Consulta as métricas agregadas de envio e entregabilidade da organização.

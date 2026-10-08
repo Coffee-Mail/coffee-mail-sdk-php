@@ -11,7 +11,8 @@ final readonly class Templates
 {
     public function __construct(
         private HttpTransportInterface $http,
-    ) {}
+    ) {
+    }
 
     /**
      * Cria um novo modelo de e-mail na organização.

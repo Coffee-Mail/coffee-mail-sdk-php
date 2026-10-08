@@ -15,7 +15,8 @@ final readonly class Emails
 {
     public function __construct(
         private HttpTransportInterface $http,
-    ) {}
+    ) {
+    }
 
     /**
      * Dispara um e-mail transacional único.

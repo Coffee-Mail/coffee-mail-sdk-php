@@ -25,7 +25,8 @@ final readonly class CurlTransport implements HttpTransportInterface
         private string $apiKey,
         private string $locale = 'pt-BR',
         private int $timeoutSeconds = 10,
-    ) {}
+    ) {
+    }
 
     public function getLocale(): string
     {

@@ -14,7 +14,8 @@ final readonly class WebhookPayload implements PayloadInterface
         public array $events,
         public ?string $name = null,
         public ?string $description = null,
-    ) {}
+    ) {
+    }
 
     /**
      * @param list<string> $events

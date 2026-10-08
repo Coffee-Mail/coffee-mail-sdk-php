@@ -12,7 +12,8 @@ final readonly class Domains
 {
     public function __construct(
         private HttpTransportInterface $http,
-    ) {}
+    ) {
+    }
 
     /**
      * Cadastra um novo domínio na organização para envio de e-mails.

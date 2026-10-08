@@ -11,7 +11,8 @@ final readonly class Broadcasts
 {
     public function __construct(
         private HttpTransportInterface $http,
-    ) {}
+    ) {
+    }
 
     /**
      * Cria uma nova campanha (broadcast) para disparo em massa.
