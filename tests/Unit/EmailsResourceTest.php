@@ -59,8 +59,17 @@ test('emails send normalizes from and to with RFC 5322 names', function (): void
     ]);
 
     expect($error)->toBeNull()
-        ->and($mockTransport->lastBody['from'])->toBe(['email' => 'contato@seudominio.com.br', 'name' => 'Empresa Exemplo'])
-        ->and($mockTransport->lastBody['to'])->toBe([['email' => 'cliente@gmail.com', 'name' => 'Cliente VIP']]);
+        ->and(is_array($mockTransport->lastBody))->toBeTrue()
+        ->and($mockTransport->lastBody['from'] ?? null)->toBe([
+            'email' => 'contato@seudominio.com.br',
+            'name' => 'Empresa Exemplo',
+        ])
+        ->and($mockTransport->lastBody['to'] ?? null)->toBe([
+            [
+                'email' => 'cliente@gmail.com',
+                'name' => 'Cliente VIP',
+            ],
+        ]);
 });
 
 test('emails resource exposes batch, get, list, cancel, resend, tags and events operations', function (): void {

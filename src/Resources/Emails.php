@@ -209,7 +209,7 @@ final class Emails
         }
 
         $email = trim($matches['email']);
-        $rawName = isset($matches['name']) && $matches['name'] !== ''
+        $rawName = $matches['name'] !== ''
             ? trim(trim($matches['name']), "\"'")
             : null;
 
