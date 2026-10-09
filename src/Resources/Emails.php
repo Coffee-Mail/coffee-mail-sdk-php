@@ -163,12 +163,12 @@ final class Emails
             }
         }
 
-        if (isset($payload['scheduledAt'])) {
-            if ($payload['scheduledAt'] instanceof DateTimeInterface) {
-                $body['scheduledAt'] = $payload['scheduledAt']->format(DateTimeInterface::ATOM);
-            } elseif (is_string($payload['scheduledAt'])) {
-                $body['scheduledAt'] = $payload['scheduledAt'];
-            }
+        $scheduledAt = $payload['scheduledAt'] ?? null;
+        if ($scheduledAt instanceof DateTimeInterface) {
+            $body['scheduledAt'] = $scheduledAt->format(DateTimeInterface::ATOM);
+        }
+        if (is_string($scheduledAt)) {
+            $body['scheduledAt'] = $scheduledAt;
         }
 
         if (isset($payload['attachments']) && is_array($payload['attachments'])) {

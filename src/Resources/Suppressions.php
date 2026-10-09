@@ -55,4 +55,25 @@ final class Suppressions
     {
         return $this->http->delete('/v1/product/suppressions/' . rawurlencode($email));
     }
+
+    /**
+     * Reativa um endereço previamente suprimido.
+     *
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function reactivate(string $id): CoffeeMailResponse
+    {
+        return $this->http->post('/v1/product/suppressions/' . rawurlencode($id) . '/reactivate');
+    }
+
+    /**
+     * Cria supressões em lote.
+     *
+     * @param array<int, array<string, mixed>> $suppressions
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function bulkCreate(array $suppressions): CoffeeMailResponse
+    {
+        return $this->http->post('/v1/product/suppressions/bulk', ['suppressions' => $suppressions]);
+    }
 }

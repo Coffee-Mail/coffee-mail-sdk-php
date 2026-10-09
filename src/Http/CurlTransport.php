@@ -189,7 +189,8 @@ final class CurlTransport implements HttpTransportInterface
                     $message = $errObj['message'];
                 }
                 $details = $errObj['details'] ?? null;
-            } elseif (isset($payload['message']) && is_string($payload['message'])) {
+            }
+            if (!isset($payload['error']) && isset($payload['message']) && is_string($payload['message'])) {
                 $message = $payload['message'];
                 $details = $payload['details'] ?? null;
             }
