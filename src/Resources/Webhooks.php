@@ -77,7 +77,9 @@ final class Webhooks
      */
     public function toggle(string $id, bool $enabled): CoffeeMailResponse
     {
-        return $this->http->patch('/v1/product/webhooks/' . rawurlencode($id) . '/toggle', ['enabled' => $enabled]);
+        return $this->http->patch('/v1/product/webhooks/' . rawurlencode($id), [
+            'status' => $enabled ? 'active' : 'paused',
+        ]);
     }
 
     /**

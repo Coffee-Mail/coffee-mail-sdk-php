@@ -64,8 +64,8 @@ test('webhooks resource handles full lifecycle CRUD, toggle, rotateSecret, test 
 
     $client->webhooks->toggle('wh_123', false);
     expect($mockTransport->lastMethod)->toBe('PATCH')
-        ->and($mockTransport->lastPath)->toBe('/v1/product/webhooks/wh_123/toggle')
-        ->and($mockTransport->lastBody)->toBe(['enabled' => false]);
+        ->and($mockTransport->lastPath)->toBe('/v1/product/webhooks/wh_123')
+        ->and($mockTransport->lastBody)->toBe(['status' => 'paused']);
 
     $client->webhooks->rotateSecret('wh_123');
     expect($mockTransport->lastMethod)->toBe('POST')

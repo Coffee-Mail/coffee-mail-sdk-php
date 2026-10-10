@@ -23,6 +23,8 @@ class CoffeeMail
     public readonly Resources\Templates $templates;
     public readonly Resources\Audiences $audiences;
     public readonly Resources\Broadcasts $broadcasts;
+    public readonly Resources\Senders $senders;
+
     public readonly Resources\Suppressions $suppressions;
     public readonly Resources\Stats $stats;
 
@@ -62,6 +64,7 @@ class CoffeeMail
         $this->templates = new Resources\Templates($this->transport);
         $this->audiences = new Resources\Audiences($this->transport);
         $this->broadcasts = new Resources\Broadcasts($this->transport);
+        $this->senders = new Resources\Senders($this->transport);
         $this->suppressions = new Resources\Suppressions($this->transport);
         $this->stats = new Resources\Stats($this->transport);
     }
