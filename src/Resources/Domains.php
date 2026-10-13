@@ -68,4 +68,24 @@ final class Domains
     {
         return $this->http->delete('/v1/product/domains/' . rawurlencode($id));
     }
+
+    /**
+     * Executa a checagem de saúde DNS de um domínio.
+     *
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function getHealth(string $id): CoffeeMailResponse
+    {
+        return $this->http->post('/v1/product/domains/' . rawurlencode($id) . '/health');
+    }
+
+    /**
+     * Consulta o progresso do aquecimento de IP do domínio.
+     *
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function getWarmupStatus(string $id): CoffeeMailResponse
+    {
+        return $this->http->get('/v1/product/domains/' . rawurlencode($id) . '/warmup');
+    }
 }

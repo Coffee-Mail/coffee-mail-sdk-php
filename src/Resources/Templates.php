@@ -68,15 +68,71 @@ final class Templates
     }
 
     /**
-     * Renderiza uma prévia do modelo substituindo as variáveis informadas.
+     * Renderiza uma prévia a partir do código-fonte informado, sem persistir nada.
+     *
+     * @param array<string, mixed> $payload Aceita html, format e variables.
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function preview(array $payload): CoffeeMailResponse
+    {
+        return $this->http->post('/v1/product/templates/preview', $payload);
+    }
+
+    /**
+     * Renderiza a prévia de um modelo já salvo, a partir do seu identificador.
      *
      * @param array<string, mixed> $variables
      * @return CoffeeMailResponse<mixed>
      */
-    public function preview(string $id, array $variables = []): CoffeeMailResponse
+    public function previewById(string $id, array $variables = []): CoffeeMailResponse
     {
-        return $this->http->post('/v1/product/templates/' . rawurlencode($id) . '/preview', [
+        $template = $this->get($id);
+        if ($template->error !== null) {
+            return $template;
+        }
+
+        $data = is_array($template->data) ? $template->data : [];
+
+        return $this->preview([
+            'html' => $data['html'] ?? '',
+            'format' => $data['format'] ?? 'html',
             'variables' => $variables,
         ]);
+    }
+
+    /**
+     * Formata o código-fonte de um template via Prettier, sem persistir nada.
+     *
+     * @param array<string, mixed> $payload
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function format(array $payload): CoffeeMailResponse
+    {
+        return $this->http->post('/v1/product/templates/format', $payload);
+    }
+
+    /**
+     * Renderiza um template e devolve o relatório de sanitização, sem persistir.
+     *
+     * @param array<string, mixed> $payload
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function testRender(array $payload): CoffeeMailResponse
+    {
+        return $this->http->post('/v1/product/templates/test-render', $payload);
+    }
+
+    /**
+     * Dispara um envio de teste de um template já salvo.
+     *
+     * @param array<string, mixed> $payload
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function testSend(string $id, array $payload): CoffeeMailResponse
+    {
+        return $this->http->post(
+            '/v1/product/templates/' . rawurlencode($id) . '/test-send',
+            $payload
+        );
     }
 }

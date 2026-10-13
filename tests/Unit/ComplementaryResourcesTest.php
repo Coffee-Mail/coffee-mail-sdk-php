@@ -39,10 +39,16 @@ test('complementary resources route properly to their corresponding REST endpoin
     expect($mockTransport->lastMethod)->toBe('POST')
         ->and($mockTransport->lastPath)->toBe('/v1/product/templates');
 
-    $client->templates->preview('tpl_123', ['nome' => 'João']);
+    $client->templates->preview([
+        'html' => '<h1>Oi {{nome}}</h1>',
+        'variables' => ['nome' => 'João'],
+    ]);
     expect($mockTransport->lastMethod)->toBe('POST')
-        ->and($mockTransport->lastPath)->toBe('/v1/product/templates/tpl_123/preview')
-        ->and($mockTransport->lastBody)->toBe(['variables' => ['nome' => 'João']]);
+        ->and($mockTransport->lastPath)->toBe('/v1/product/templates/preview')
+        ->and($mockTransport->lastBody)->toBe([
+            'html' => '<h1>Oi {{nome}}</h1>',
+            'variables' => ['nome' => 'João'],
+        ]);
 
     // Audiences
     $client->audiences->create(['name' => 'Clientes VIP']);
