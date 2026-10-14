@@ -2,7 +2,7 @@
     "name": "coffeemail/coffeemail-php",
     "description": "SDK oficial do CoffeeMail para PHP moderno (8.2+). Envio transacional de e-mails, templates, domínios e webhooks com tipagem estrita e retorno seguro.",
     "type": "library",
-    "license": "proprietary",
+    "license": "MIT",
     "authors": [
         {
             "name": "CoffeeMail Team",
