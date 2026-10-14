@@ -471,7 +471,7 @@ Para Laravel existe o pacote dedicado [`coffeemail/coffeemail-laravel`](https://
 ## 🔖 Versionamento e releases
 
 - **SemVer.** Na série `0.x`, mudanças incompatíveis podem ocorrer entre minors, mas a regra abaixo vale desde já.
-- **Compatibilidade retroativa.** O SDK está publicado e em uso. A superfície pública (classes, métodos, nomes de parâmetro, propriedades, formatos de retorno) só pode **ganhar** itens ou ser **depreciada** com `@deprecated`; nunca renomeada nem removida. Exemplo em vigor: `broadcasts->delete()` foi mantido e depreciado em vez de removido. Os SDKs oficiais (Node.js, Python, PHP, Java) seguem o mesmo contrato: funcionalidade nova entra em todos.
+- **Compatibilidade retroativa.** O SDK está publicado e em uso. A superfície pública (classes, métodos, nomes de parâmetro, propriedades, formatos de retorno) só pode **ganhar** itens ou ser **depreciada** com `@deprecated`; nunca renomeada nem removida. Exemplo em vigor: `broadcasts->delete()` foi mantido e depreciado em vez de removido. Os SDKs oficiais (Node.js, Python, PHP, Java, Go) seguem o mesmo contrato: funcionalidade nova entra em todos.
 - **Publicação.** Um push de tag `v*` dispara [`.github/workflows/release.yml`](.github/workflows/release.yml), que valida o `composer.json`, roda `composer check` em PHP 8.2 e cria o GitHub Release com notas geradas automaticamente. O Packagist lê as tags do repositório. Ao publicar, atualize também `SDK_VERSION` em `src/Http/CurlTransport.php` (usado no `User-Agent`).
 - **Changelog.** Não há `CHANGELOG.md`; o histórico está nas [GitHub Releases](https://github.com/Coffee-Mail/coffee-mail-sdk-php/releases) e no `git log`.
 
@@ -527,6 +527,7 @@ Vulnerabilidades: **não** abra issue pública; siga o [SECURITY.md](SECURITY.md
 | [coffee-mail-sdk-python](https://github.com/Coffee-Mail/coffee-mail-sdk-python) | SDK oficial Python (`coffeemail`) |
 | **coffee-mail-sdk-php** (você está aqui) | SDK oficial PHP (`coffeemail/coffeemail-php`) |
 | [coffee-mail-sdk-java](https://github.com/Coffee-Mail/coffee-mail-sdk-java) | SDK oficial Java (`br.com.coffeemail:coffeemail-java`) |
+| [coffee-mail-sdk-go](https://github.com/Coffee-Mail/coffee-mail-sdk-go) | SDK oficial Go (`github.com/Coffee-Mail/coffee-mail-sdk-go`) |
 | [coffee-mail-laravel](https://github.com/Coffee-Mail/coffee-mail-laravel) | Integração Laravel (`coffeemail/coffeemail-laravel`: mail driver + facade) |
 | [coffee-mail-sdk-workbench](https://github.com/Coffee-Mail/coffee-mail-sdk-workbench) | Bancada de validação dos SDKs por spec |
 
