@@ -1,397 +1,537 @@
-# CoffeeMail PHP SDK
+<div align="center">
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/coffeemail/coffeemail-php.svg?style=flat-square&color=c27803)](https://packagist.org/packages/coffeemail/coffeemail-php)
-[![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.2-777BB4.svg?style=flat-square&logo=php&logoColor=white)](https://php.net)
-[![PHPStan Level 9](https://img.shields.io/badge/PHPStan-Level%209-brightgreen.svg?style=flat-square)](https://phpstan.org)
-[![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero%20(ext--curl)-blue.svg?style=flat-square)](#requisitos)
-[![Software License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
+# ☕ CoffeeMail PHP SDK
 
-O **SDK oficial do CoffeeMail para PHP** fornece uma camada fortemente tipada, moderna (PHP 8.2+) e de alta performance para envio de e-mails transacionais e gerenciamento completo da plataforma CoffeeMail.
+**SDK oficial do CoffeeMail para PHP 8.2+: envio transacional e gestão da plataforma com retorno em envelope, sem dependências de produção além de `ext-curl` e `ext-json`.**
 
-Projetado sob princípios de **Clean Code**, **SOLID** e **Zero Dependencies**, o pacote utiliza exclusivamente as extensões nativas `ext-curl` e `ext-json`, evitando conflitos de dependências em projetos Laravel, Symfony, WordPress ou aplicações legadas.
+[![Packagist](https://img.shields.io/packagist/v/coffeemail/coffeemail-php.svg?style=flat-square)](https://packagist.org/packages/coffeemail/coffeemail-php)
+[![PHP](https://img.shields.io/badge/PHP-%5E8.2-777BB4.svg?style=flat-square&logo=php&logoColor=white)](composer.json)
+[![CI](https://github.com/Coffee-Mail/coffee-mail-sdk-php/actions/workflows/ci.yml/badge.svg)](https://github.com/Coffee-Mail/coffee-mail-sdk-php/actions/workflows/ci.yml)
+[![PHPStan](https://img.shields.io/badge/PHPStan-n%C3%ADvel%209-brightgreen.svg?style=flat-square)](phpstan.neon)
+[![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green.svg?style=flat-square)](LICENSE)
 
----
+[Instalação](#-instalação) · [Início rápido](#-início-rápido) · [Erros](#️-tratamento-de-erros) · [Referência](#-referência) · [Webhooks](#-webhooks) · [Versionamento](#-versionamento-e-releases)
 
-## ⚡ Diferenciais do SDK
-
-* **Retorno Seguro em Envelope `{ data, error }`**: Sem disparos acidentais de exceções para status HTTP 4xx/5xx — você escolhe entre desestruturação funcional em tuplas ou lançamento defensivo via `->unwrap()`.
-* **Zero Dependências de Produção**: Sem Guzzle ou PSR-7/18 arrastando dezenas de pacotes secundários.
-* **Segurança Criptográfica**: Verificação de assinaturas HMAC SHA-256 de webhooks com comparação em tempo constante (`hash_equals`).
-* **Qualidade Rigorosa**: Tipagem estrita com `declare(strict_types=1)` em todos os arquivos e conformidade máxima com o **PHPStan (Nível 9)**.
-* **DTOs & Payloads Opcionais**: Suporte nativo a classes de payload tipadas (`EmailPayload`, `AttachmentPayload`) ou arrays associativos tradicionais.
-* **Localização Nativa (`i18n`)**: Tratamento de timeouts, erros de conexão e header `Accept-Language` configuráveis em `pt-BR` ou `en`.
+</div>
 
 ---
 
-## 📦 Requisitos
+## 📑 Sumário
 
-* **PHP 8.2** ou superior.
-* Extensões PHP habilitadas: `ext-curl` e `ext-json`.
+- [✨ Visão geral](#-visão-geral)
+- [🚦 Status do projeto](#-status-do-projeto)
+- [📋 Requisitos](#-requisitos)
+- [📦 Instalação](#-instalação)
+- [🚀 Início rápido](#-início-rápido)
+- [⚙️ Configuração](#️-configuração)
+- [🛡️ Tratamento de erros](#️-tratamento-de-erros)
+- [📚 Referência](#-referência)
+- [🔔 Webhooks](#-webhooks)
+- [🔖 Versionamento e releases](#-versionamento-e-releases)
+- [🧪 Testes e qualidade](#-testes-e-qualidade)
+- [🗂️ Estrutura do repositório](#️-estrutura-do-repositório)
+- [🤝 Contribuição](#-contribuição)
+- [🔗 Projetos relacionados](#-projetos-relacionados)
+- [📄 Licença](#-licença)
 
----
+## ✨ Visão geral
 
-## 🚀 Instalação
+- **Envelope em vez de exceção.** Toda chamada à API devolve um `CoffeeMailResponse` imutável. Erros HTTP e de rede viram uma exceção tipada **dentro** do envelope; você escolhe entre desestruturar `[$data, $error]` ou chamar `->unwrap()` para lançar.
+- **Sem dependências de produção.** Usa só `ext-curl` e `ext-json` (sem Guzzle, sem PSR-7/18), o que evita conflito de versões em Laravel, Symfony, WordPress ou código legado.
+- **Payloads tipados opcionais.** `EmailPayload`, `AttachmentPayload`, `DomainPayload` e `WebhookPayload`, ou arrays associativos.
+- **Normalização de participantes.** `from`, `to`, `cc`, `bcc` e `replyTo` aceitam `'email@x.com'`, `'Nome <email@x.com>'` ou `['email' => ..., 'name' => ...]`, convertidos para o formato `{ email, name? }` exigido pela API.
+- **Mensagens localizadas** (`pt-BR` e `en`) para erros gerados pelo próprio SDK, e header `Accept-Language` enviado à API.
+- **Transporte substituível** via `HttpTransportInterface`, útil para testes e para customizar o cliente HTTP.
+- `declare(strict_types=1)` em todos os arquivos e PHPStan nível 9 sobre `src` e `tests`.
 
-Instale o pacote oficial via Composer:
+## 🚦 Status do projeto
+
+Pré-1.0 (`0.1.x`). Leia antes de usar em produção:
+
+- **`main` está à frente da versão publicada.** O Packagist tem só a `v0.1.0` (publicada em 2026-10-08, commit `1c7e38a`). Tudo o que está marcado como _não publicado_ na [Referência](#-referência) só existe em `main` (`0.1.x-dev`). A `v0.1.0` também foi registrada no Packagist como licença `proprietary`; a adoção da MIT veio depois e entra no próximo release.
+- **`Webhooks::verifySignature()` não valida as entregas reais da API.** O SDK calcula `hex(HMAC-SHA256(secret, body))`, mas a API assina `"{timestamp}.{idempotencyKey}.{body}"` com prefixo `sha256=` e envia o resultado no header `x-webhook-signature`. Até o SDK ganhar um verificador compatível, use a verificação manual descrita em [Webhooks](#-webhooks).
+- **`audiences->bulkAddContacts()` envia o formato errado.** O SDK manda a lista crua; a API espera `{ "contacts": [...] }` e responde 400.
+- **`WebhookPayload` aceita `name`, mas a API rejeita esse campo** (`additionalProperties: false`). Não preencha `name`.
+- **Campos de envio não repassados.** `emails->send()` só encaminha `from`, `to`, `cc`, `bcc`, `replyTo`, `subject`, `html`, `text`, `templateId`, `variables`, `headers`, `tags`, `scheduledAt` e `attachments`. `metadata`, `emailType` e `suppressionCategory` (aceitos pela API) são descartados.
+- **`subject` é obrigatório no SDK** mesmo em envio por `templateId`, embora a API o aceite opcional.
+- **`suppressions->get()` e `suppressions->delete()`** nomeiam o parâmetro `$email`, mas a API espera o **ID** da supressão.
+- **`broadcasts->delete()` está depreciado.** A API não tem exclusão de campanha; o método devolve `ValidationError` sem chamada de rede. Use `cancel()`.
+- **Sem retry automático.** `RateLimitError` expõe `retryAfterSeconds`, mas a nova tentativa é por sua conta.
+- **URL base fixa** em `https://api.coffeemail.com.br`. Não há opção para apontar a outro host; para isso, injete um `HttpTransportInterface` próprio.
+
+## 📋 Requisitos
+
+| Item | Versão |
+| --- | --- |
+| PHP | `^8.2` (CI roda 8.2, 8.3 e 8.4) |
+| Extensões | `ext-curl`, `ext-json` |
+| Composer | 2.x |
+
+## 📦 Instalação
 
 ```bash
 composer require coffeemail/coffeemail-php
 ```
 
----
+Para usar o que já está em `main` e ainda não foi publicado:
 
-## 🔑 Inicialização do Cliente
+```bash
+composer require coffeemail/coffeemail-php:0.1.x-dev
+```
 
-O cliente resolve sua API Key automaticamente a partir da variável de ambiente `COFFEEMAIL_API_KEY`:
+## 🚀 Início rápido
 
 ```php
 use CoffeeMail\CoffeeMail;
 
-// 1. Resolução automática via variável de ambiente (COFFEEMAIL_API_KEY):
 $client = new CoffeeMail();
 
-// 2. Ou informando a chave explicitamente no construtor:
-$client = new CoffeeMail(
-    apiKey: 'cm_live_sua_chave_aqui',
-    locale: 'pt-BR',           // 'pt-BR' (padrão) ou 'en'
-    timeoutSeconds: 10          // Tempo limite de conexão
-);
-```
-
----
-
-## 🎯 Padrões de Retorno: Tuplas vs. Exceções
-
-Todas as chamadas à API retornam uma instância imutável de `CoffeeMailResponse<T>`.
-
-### Estilo 1: Desestruturação Nativa de Tupla (Recomendado)
-
-Inspirado em padrões modernos funcionais, permite controle de fluxo limpo sem blocos `try/catch` aninhados:
-
-```php
 [$data, $error] = $client->emails->send([
-    'from' => 'contato@seudominio.com.br',
-    'to' => 'cliente@gmail.com',
-    'subject' => 'Seu pedido foi aprovado!',
+    'from' => 'Loja Exemplo <contato@seudominio.com.br>',
+    'to' => 'cliente@exemplo.com',
+    'subject' => 'Seu pedido foi aprovado',
     'html' => '<h1>Pedido #1234</h1><p>Obrigado pela compra.</p>',
 ]);
 
 if ($error !== null) {
-    echo "Falha ao enviar [{$error->code}]: {$error->message}\n";
+    echo "Falha [{$error->code}]: {$error->getMessage()}\n";
     exit(1);
 }
 
-echo "E-mail enviado! ID: {$data['id']}\n";
+echo "Enfileirado: {$data['id']} ({$data['status']})\n";
 ```
 
-### Estilo 2: Método `->unwrap()` (Estilo Imperativo / Try-Catch)
+Sem argumentos, o cliente lê a chave de `COFFEEMAIL_API_KEY`. A API responde `202` com `id`, `status` (`queued` ou `scheduled`) e `queuedAt`: o envio é assíncrono, e o resultado final chega por [webhook](#-webhooks) ou por `emails->get()` / `emails->getEvents()`.
 
-Para desenvolvedores ou arquiteturas que preferem capturar exceções tipadas:
+## ⚙️ Configuração
 
 ```php
-use CoffeeMail\Exceptions\RateLimitError;
-use CoffeeMail\Exceptions\ValidationError;
-use CoffeeMail\Exceptions\CoffeeMailException;
+use CoffeeMail\CoffeeMail;
 
-try {
-    $email = $client->emails->send([
-        'from' => 'contato@seudominio.com.br',
-        'to' => 'cliente@gmail.com',
-        'subject' => 'Aviso de Cobrança',
-        'html' => '<p>Fatura disponível.</p>',
-    ])->unwrap();
+$client = new CoffeeMail(
+    apiKey: 'cm_live_...',
+    locale: 'en',
+    timeoutSeconds: 15,
+);
+```
 
-    echo "Sucesso: {$email['id']}\n";
-} catch (RateLimitError $e) {
-    echo "Limite de requisições excedido. Aguarde {$e->retryAfterSeconds}s.\n";
-} catch (ValidationError $e) {
-    echo "Dados inválidos: {$e->getMessage()}\n";
-} catch (CoffeeMailException $e) {
-    echo "Erro da API CoffeeMail: {$e->getMessage()}\n";
+| Parâmetro | Tipo | Default | Env var | Descrição |
+| --- | --- | --- | --- | --- |
+| `apiKey` | `?string` | `null` | `COFFEEMAIL_API_KEY` | Chave de API. Se `null` ou vazia, usa a variável de ambiente. Sem nenhuma das duas, o construtor **lança** `AuthenticationError`. |
+| `locale` | `string` | `'pt-BR'` | — | `pt-BR` ou `en`. Define as mensagens geradas pelo SDK e o header `Accept-Language`. Valores fora da lista caem em `pt-BR` nas mensagens locais. |
+| `timeoutSeconds` | `int` | `10` | — | Timeout total da requisição (`CURLOPT_TIMEOUT`). O timeout de conexão é `min(5, timeoutSeconds)`. |
+| `transport` | `?HttpTransportInterface` | `null` | — | Transporte HTTP customizado. Quando informado, `locale` e `timeoutSeconds` são ignorados (o transporte decide). |
+
+Headers enviados pelo `CurlTransport` em toda requisição: `Authorization: Bearer <apiKey>`, `Content-Type: application/json`, `Accept: application/json`, `Accept-Language: <locale>`, `User-Agent: coffeemail-php/0.1.0`.
+
+Métodos do cliente:
+
+| Método | Retorno | Descrição |
+| --- | --- | --- |
+| `introspect(bool $forceRefresh = false)` | `CoffeeMailResponse` | `GET /v1/product/auth/me/api-key`. Detalhes da chave em uso, com cache local de 5 minutos (só respostas de sucesso entram no cache). |
+| `invalidateApiKeyCache()` | `void` | Limpa o cache de `introspect()`. |
+| `getApiKey()` | `string` | Chave resolvida. |
+| `getLocale()` | `string` | Locale do transporte. |
+| `getTransport()` | `HttpTransportInterface` | Transporte em uso. |
+
+## 🛡️ Tratamento de erros
+
+### O envelope `CoffeeMailResponse`
+
+| Membro | Descrição |
+| --- | --- |
+| `$data` | Corpo JSON decodificado (array associativo) ou `null`. `null` também em `204` e corpo vazio. |
+| `$error` | `?CoffeeMailException`. |
+| `$statusCode` | Status HTTP real. `0` em falha de rede e em erros gerados localmente. |
+| `isSuccess()` / `isError()` | Atalhos para `$error === null` / `!== null`. |
+| `unwrap()` | Devolve `$data` ou lança `$error`. |
+| `toTuple()` | `[$data, $error]`. O envelope também implementa `ArrayAccess`, por isso `[$data, $error] = $response` funciona direto. É imutável: escrever nos índices lança `LogicException`. |
+
+Desestruturação:
+
+```php
+[$email, $error] = $client->emails->get($emailId);
+
+if ($error !== null) {
+    return;
 }
 ```
 
----
-
-## 📨 Envio de E-mails (`$client->emails`)
-
-### Envio com DTOs Tipados (`EmailPayload`)
-
-O uso de DTOs garante autocompletion completo na IDE e evita erros de digitação:
+Estilo com exceção:
 
 ```php
-use CoffeeMail\Payloads\EmailPayload;
-use CoffeeMail\Payloads\AttachmentPayload;
+use CoffeeMail\Exceptions\CoffeeMailException;
+use CoffeeMail\Exceptions\RateLimitError;
+use CoffeeMail\Exceptions\ValidationError;
 
-$payload = new EmailPayload(
-    from: 'contato@seudominio.com.br',
-    to: 'cliente@gmail.com',
-    subject: 'Boleto de Renovação',
+try {
+    $email = $client->emails->send($payload)->unwrap();
+} catch (RateLimitError $e) {
+    $wait = $e->retryAfterSeconds ?? 1;
+} catch (ValidationError $e) {
+    $details = $e->details;
+} catch (CoffeeMailException $e) {
+    $code = $e->errorCode;
+}
+```
+
+### Classes de erro
+
+Todas ficam em `CoffeeMail\Exceptions` e estendem `CoffeeMailException` (que estende `RuntimeException`).
+
+| Classe | Status HTTP | `errorCode` | Quando ocorre |
+| --- | --- | --- | --- |
+| `ValidationError` | 400 | `VALIDATION_ERROR` | Payload rejeitado pela API; também gerado localmente (ver abaixo). |
+| `AuthenticationError` | 401 | `UNAUTHORIZED` | Chave inválida, revogada ou ausente. |
+| `PaymentRequiredError` | 402 | `PAYMENT_REQUIRED` | Cota do plano esgotada ou recurso bloqueado pelo plano. |
+| `ForbiddenError` | 403 | `FORBIDDEN` | Chave sem a permissão exigida pela rota. |
+| `NotFoundError` | 404 | `NOT_FOUND` | Recurso inexistente na organização. |
+| `ConflictError` | 409 | `CONFLICT` | Conflito de estado ou duplicidade. |
+| `RateLimitError` | 429 | `RATE_LIMIT_EXCEEDED` | Limite de requisições. `retryAfterSeconds` vem do header `Retry-After` (`null` se ausente). |
+| `InternalServerError` | 500 | `INTERNAL_ERROR` | Qualquer outro status `>= 400` (inclusive 413, 422, 5xx). |
+| `NetworkException` | 0 | `NETWORK_ERROR` | Falha de DNS/conexão, timeout ou `curl_init` indisponível. |
+
+Propriedades comuns: `status` (int, fixo por classe), `errorCode` (string, fixo por classe; também acessível como `$e->code` e `getErrorCode()`), `details` (o campo `details` do corpo de erro da API) e `getMessage()` (mensagem da API, ou mensagem localizada do SDK). `getCode()` devolve o status inteiro.
+
+> Para `InternalServerError`, `status` é sempre `500`. O status real (ex.: `422`, `503`) está em `$response->statusCode`.
+
+### O que lança fora do envelope
+
+| Situação | Exceção |
+| --- | --- |
+| `new CoffeeMail()` sem chave e sem `COFFEEMAIL_API_KEY` | `AuthenticationError` |
+| `emails->send()` / `sendBatch()` sem `from`, `to` ou `subject`, ou com participante em formato inválido | `ValidationError` |
+| `AttachmentPayload::fromPath()` com arquivo inexistente ou ilegível | `InvalidArgumentException` |
+
+## 📚 Referência
+
+Todos os métodos devolvem `CoffeeMailResponse`. Parâmetros `array $query` viram query string. A coluna **Desde** indica `0.1.0` (publicado) ou `main` (_não publicado_).
+
+### Emails — `$client->emails`
+
+| Método | Endpoint | Desde |
+| --- | --- | --- |
+| `send(array\|EmailPayload $payload)` | `POST /v1/product/emails` | 0.1.0 |
+| `sendBatch(array $items)` | `POST /v1/product/emails/batch` | 0.1.0 |
+| `get(string $id)` | `GET /v1/product/emails/{id}` | 0.1.0 |
+| `list(array $query = [])` | `GET /v1/product/emails` | 0.1.0 |
+| `getEvents(string $id)` | `GET /v1/product/emails/{id}/events` | 0.1.0 |
+| `getTags()` | `GET /v1/product/emails/tags` | 0.1.0 |
+| `cancel(string $id)` | `POST /v1/product/emails/{id}/cancel` | 0.1.0 |
+| `resend(string $id)` | `POST /v1/product/emails/{id}/resend` | 0.1.0 |
+
+Campos de `send()` (array ou `EmailPayload`):
+
+| Campo | Tipo | Observação |
+| --- | --- | --- |
+| `from` | `string\|array{email, name?}` | Obrigatório. |
+| `to` | `string\|list<string>\|list<array{email, name?}>` | Obrigatório. A API aceita de 1 a 50. |
+| `subject` | `string` | Obrigatório no SDK. |
+| `html`, `text` | `?string` | Até 100 KB cada. |
+| `cc`, `bcc` | como `to` | Até 50 cada. |
+| `replyTo` | `string\|array{email, name?}` | A API aceita um único endereço. |
+| `templateId`, `variables` | `string`, `array` | Só no formato array; `EmailPayload` não tem esses campos. |
+| `headers` | `array<string, string>` | Cabeçalhos SMTP customizados. |
+| `tags` | `list<array{name, value}>` | Até 10. É o formato exigido pela API; o SDK repassa sem converter. |
+| `attachments` | `list<AttachmentPayload\|array>` | Até 10. |
+| `scheduledAt` | `string` (ISO 8601) | No formato array também aceita `DateTimeInterface`. |
+| `idempotencyKey` | `string` | Enviado como header `x-idempotency-key`. |
+| `isSandbox` | `bool` | `true` envia o header `x-coffeemail-sandbox: true`. |
+
+```php
+use CoffeeMail\Payloads\AttachmentPayload;
+use CoffeeMail\Payloads\EmailPayload;
+
+[$data, $error] = $client->emails->send(new EmailPayload(
+    from: 'Financeiro <financeiro@seudominio.com.br>',
+    to: ['cliente@exemplo.com'],
+    subject: 'Boleto de renovação',
     html: '<p>Segue seu boleto em anexo.</p>',
     attachments: [
         AttachmentPayload::fromPath('/var/docs/boleto_123.pdf', 'boleto.pdf', 'application/pdf'),
     ],
-    idempotencyKey: 'pedido_renovacao_123', // Garante disparo único
-    isSandbox: false,
-);
+    tags: [['name' => 'categoria', 'value' => 'cobranca']],
+    idempotencyKey: 'renovacao-123',
+));
 
-[$data, $error] = $client->emails->send($payload);
+[$data, $error] = $client->emails->send([
+    'from' => 'contato@seudominio.com.br',
+    'to' => 'cliente@exemplo.com',
+    'subject' => 'Bem-vindo',
+    'templateId' => $templateId,
+    'variables' => ['nome' => 'Ana'],
+    'scheduledAt' => new DateTimeImmutable('+1 hour'),
+]);
 ```
 
-### Anexos Descomplicados (`AttachmentPayload`)
+`sendBatch()` aceita uma lista de arrays ou `EmailPayload` (a API aceita de 1 a 100). Os headers de `idempotencyKey`/`isSandbox` dos itens são mesclados em uma única requisição, então só o último `idempotencyKey` vale para o lote inteiro.
 
-Você pode anexar arquivos físicos diretamente do disco ou dados brutos em memória:
+Anexos (`AttachmentPayload`):
+
+| Construtor | Descrição |
+| --- | --- |
+| `new AttachmentPayload(string $filename, string $content, ?string $contentType = null)` | `content` já em Base64. |
+| `AttachmentPayload::fromPath(string $filePath, ?string $filename = null, ?string $contentType = null)` | Lê o arquivo e codifica em Base64. Sem `contentType`, tenta `mime_content_type()`. |
+| `AttachmentPayload::fromRaw(string $filename, string $rawBytes, ?string $contentType = null)` | Bytes em memória (ex.: PDF gerado na hora). |
+| `AttachmentPayload::fromBase64(string $filename, string $base64Content, ?string $contentType = null)` | String já codificada. |
+
+No formato array, um anexo aceita `filename`, `content`, `contentType` (default `application/octet-stream`), `disposition` (default `attachment`) e `cid`. Conteúdo que não seja Base64 válido é codificado automaticamente; itens sem `filename` ou `content` são descartados em silêncio.
+
+### Domínios — `$client->domains`
+
+| Método | Endpoint | Desde |
+| --- | --- | --- |
+| `create(array\|DomainPayload $payload)` | `POST /v1/product/domains` | 0.1.0 |
+| `list(array $query = [])` | `GET /v1/product/domains` | 0.1.0 |
+| `get(string $id)` | `GET /v1/product/domains/{id}` | 0.1.0 |
+| `verify(string $id)` | `POST /v1/product/domains/{id}/verify` | 0.1.0 |
+| `delete(string $id)` | `DELETE /v1/product/domains/{id}` | 0.1.0 |
+| `getHealth(string $id)` | `POST /v1/product/domains/{id}/health` | main |
+| `getWarmupStatus(string $id)` | `GET /v1/product/domains/{id}/warmup` | main |
 
 ```php
-use CoffeeMail\Payloads\AttachmentPayload;
+use CoffeeMail\Payloads\DomainPayload;
 
-// 1. Arquivo do sistema de arquivos (converte para Base64 e detecta MIME automaticamente):
-$anexo1 = AttachmentPayload::fromPath('/storage/fatura.pdf');
-
-// 2. Bytes brutos em memória (ex: PDF gerado via Dompdf / TCPDF / Snappy):
-$anexo2 = AttachmentPayload::fromRaw('relatorio.pdf', $pdfBytes, 'application/pdf');
-
-// 3. String Base64 pré-codificada:
-$anexo3 = AttachmentPayload::fromBase64('comprovante.png', $base64String, 'image/png');
+[$domain, $error] = $client->domains->create(DomainPayload::create('seudominio.com.br'));
+[$check, $error] = $client->domains->verify($domain['id']);
 ```
 
-### Envio em Lote (`sendBatch`)
+### Remetentes — `$client->senders` (_não publicado_)
 
-Envie múltiplos e-mails transacionais otimizados em uma única requisição HTTP:
+Remetente verificado por endereço, alternativa a verificar o domínio inteiro.
+
+| Método | Endpoint | Desde |
+| --- | --- | --- |
+| `create(string $email, string $displayName)` | `POST /v1/product/senders` | main |
+| `list()` | `GET /v1/product/senders` | main |
+| `verify(string $token)` | `POST /v1/product/senders/verify` | main |
+| `delete(string $id)` | `DELETE /v1/product/senders/{id}` | main |
 
 ```php
-use CoffeeMail\Payloads\EmailPayload;
-
-$lote = [
-    new EmailPayload(
-        from: 'financeiro@empresa.com.br',
-        to: 'cliente1@gmail.com',
-        subject: 'Atualização Cadastral',
-        html: '<p>Olá João!</p>',
-    ),
-    new EmailPayload(
-        from: 'financeiro@empresa.com.br',
-        to: 'cliente2@gmail.com',
-        subject: 'Atualização Cadastral',
-        html: '<p>Olá Maria!</p>',
-    ),
-];
-
-[$data, $error] = $client->emails->sendBatch($lote);
+[$sender, $error] = $client->senders->create('suporte@seudominio.com.br', 'Suporte');
 ```
 
-### Consulta e Rastreamento
+### Templates — `$client->templates`
+
+| Método | Endpoint | Desde |
+| --- | --- | --- |
+| `create(array $payload)` | `POST /v1/product/templates` | 0.1.0 |
+| `list(array $query = [])` | `GET /v1/product/templates` | 0.1.0 |
+| `get(string $id)` | `GET /v1/product/templates/{id}` | 0.1.0 |
+| `update(string $id, array $payload)` | `PATCH /v1/product/templates/{id}` | 0.1.0 |
+| `delete(string $id)` | `DELETE /v1/product/templates/{id}` | 0.1.0 |
+| `preview(array $payload)` | `POST /v1/product/templates/preview` | main (ver nota) |
+| `previewById(string $id, array $variables = [])` | `GET /templates/{id}` + `POST /templates/preview` | main |
+| `format(array $payload)` | `POST /v1/product/templates/format` | main |
+| `testRender(array $payload)` | `POST /v1/product/templates/test-render` | main |
+| `testSend(string $id, array $payload)` | `POST /v1/product/templates/{id}/test-send` | main |
+
+> Na `v0.1.0`, `preview(string $id, array $variables = [])` chamava `POST /templates/{id}/preview`, endpoint que a API não tem. Em `main` a assinatura passou a ser `preview(array $payload)`; para pré-visualizar um template salvo use `previewById()`.
 
 ```php
-// Consultar status de entrega de um e-mail
-[$email, $error] = $client->emails->get('eml_8f92b7c4');
-
-// Linha do tempo de eventos (enfileirado -> enviado -> entregue -> aberto -> clicado)
-[$eventos, $error] = $client->emails->getEvents('eml_8f92b7c4');
-
-// Listar envios recentes filtrados por status
-[$lista, $error] = $client->emails->list([
-    'status' => 'delivered',
-    'limit' => 50,
+[$preview, $error] = $client->templates->preview([
+    'html' => '<h1>Oi {{nome}}</h1>',
+    'variables' => ['nome' => 'João'],
 ]);
 
-// Cancelar envio agendado antes do disparo
-[$cancelado, $error] = $client->emails->cancel('eml_8f92b7c4');
+[$preview, $error] = $client->templates->previewById($templateId, ['nome' => 'Ana']);
 ```
 
----
+### Audiências — `$client->audiences`
 
-## 🔒 Webhooks e Validação Criptográfica HMAC
-
-O CoffeeMail assina todas as requisições de webhook enviando um hash HMAC SHA-256 no header `X-CoffeeMail-Signature`. O método `Webhooks::verifySignature` executa a validação em tempo constante contra *timing attacks*:
-
-### Exemplo em Laravel
-
-No seu Controller (`app/Http/Controllers/CoffeeMailWebhookController.php`):
+| Método | Endpoint | Desde |
+| --- | --- | --- |
+| `create(array $payload)` | `POST /v1/product/audiences` | 0.1.0 |
+| `list(array $query = [])` | `GET /v1/product/audiences` | 0.1.0 |
+| `get(string $id)` | `GET /v1/product/audiences/{id}` | 0.1.0 |
+| `delete(string $id)` | `DELETE /v1/product/audiences/{id}` | 0.1.0 |
+| `listContacts(string $audienceId, array $query = [])` | `GET /v1/product/audiences/{id}/contacts` | 0.1.0 |
+| `addContact(string $audienceId, array $payload)` | `POST /v1/product/audiences/{id}/contacts` | 0.1.0 |
+| `bulkAddContacts(string $audienceId, array $contacts)` | `POST /v1/product/audiences/{id}/contacts/bulk` | 0.1.0 (quebrado, ver [Status](#-status-do-projeto)) |
+| `removeContact(string $audienceId, string $contactId)` | `DELETE /v1/product/audiences/{id}/contacts/{contactId}` | 0.1.0 |
 
 ```php
-namespace App\Http\Controllers;
-
-use CoffeeMail\Resources\Webhooks;
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-
-class CoffeeMailWebhookController extends Controller
-{
-    public function handle(Request $request): Response
-    {
-        $payload = $request->getContent();
-        $signature = $request->header('x-coffeemail-signature', '');
-        $secret = config('services.coffeemail.webhook_secret');
-
-        if (! Webhooks::verifySignature($payload, $signature, $secret)) {
-            return response('Assinatura inválida', 401);
-        }
-
-        $event = $request->json()->all();
-
-        match ($event['event'] ?? '') {
-            'email.delivered' => Log::info("E-mail entregue: {$event['data']['id']}"),
-            'email.bounced'   => Log::warning("Bounce detectado: {$event['data']['to'][0]['email']}"),
-            default           => null,
-        };
-
-        return response('OK', 200);
-    }
-}
+[$audience, $error] = $client->audiences->create(['name' => 'Clientes VIP']);
+[$contact, $error] = $client->audiences->addContact($audience['id'], ['email' => 'vip@exemplo.com']);
 ```
 
-> **Atenção**: No Laravel 11+, certifique-se de excluir a rota do webhook da verificação do middleware CSRF em `bootstrap/app.php`:
-> ```php
-> ->withMiddleware(function (Middleware $middleware) {
->     $middleware->validateCsrfTokens(except: ['webhooks/coffeemail']);
-> })
-> ```
+A API também expõe `PUT /audiences/{id}` e `PUT /audiences/{id}/contacts/{contactId}`, ainda sem método no SDK.
 
-### Exemplo em Vanilla PHP / PSR-7
+### Campanhas — `$client->broadcasts`
+
+| Método | Endpoint | Desde |
+| --- | --- | --- |
+| `create(array $payload)` | `POST /v1/product/broadcasts` | 0.1.0 |
+| `list(array $query = [])` | `GET /v1/product/broadcasts` | 0.1.0 |
+| `get(string $id)` | `GET /v1/product/broadcasts/{id}` | 0.1.0 |
+| `send(string $id)` | `POST /v1/product/broadcasts/{id}/send` | 0.1.0 |
+| `cancel(string $id)` | `POST /v1/product/broadcasts/{id}/cancel` | 0.1.0 |
+| `testSend(string $id, array $payload)` | `POST /v1/product/broadcasts/{id}/test-send` | main |
+| `delete(string $id)` | nenhum (depreciado, devolve `ValidationError` sem rede) | 0.1.0 |
 
 ```php
-use CoffeeMail\Resources\Webhooks;
+[$result, $error] = $client->broadcasts->send($broadcastId);
+```
 
-$payload = file_get_contents('php://input') ?: '';
-$signature = $_SERVER['HTTP_X_COFFEEMAIL_SIGNATURE'] ?? '';
+### Supressões — `$client->suppressions`
+
+| Método | Endpoint | Desde |
+| --- | --- | --- |
+| `list(array $query = [])` | `GET /v1/product/suppressions` | 0.1.0 |
+| `get(string $email)` | `GET /v1/product/suppressions/{id}` | 0.1.0 |
+| `create(array $payload)` | `POST /v1/product/suppressions` | 0.1.0 |
+| `delete(string $email)` | `DELETE /v1/product/suppressions/{id}` | 0.1.0 |
+| `reactivate(string $id)` | `POST /v1/product/suppressions/{id}/reactivate` | main |
+| `bulkCreate(array $suppressions)` | `POST /v1/product/suppressions/bulk` (corpo `{ suppressions }`) | main |
+
+Em `get()` e `delete()`, passe o ID da supressão (o nome `$email` do parâmetro é herdado e não reflete o que a API espera).
+
+```php
+[$page, $error] = $client->suppressions->list(['limit' => 50]);
+```
+
+### Webhooks — `$client->webhooks`
+
+| Método | Endpoint | Desde |
+| --- | --- | --- |
+| `create(array\|WebhookPayload $payload)` | `POST /v1/product/webhooks` | 0.1.0 |
+| `list(array $query = [])` | `GET /v1/product/webhooks` | 0.1.0 |
+| `get(string $id)` | `GET /v1/product/webhooks/{id}` | 0.1.0 |
+| `update(string $id, array $payload)` | `PATCH /v1/product/webhooks/{id}` | 0.1.0 |
+| `delete(string $id)` | `DELETE /v1/product/webhooks/{id}` | 0.1.0 |
+| `toggle(string $id, bool $enabled)` | `PATCH /v1/product/webhooks/{id}` com `status` `active`/`paused` | 0.1.0 (endpoint corrigido em main) |
+| `rotateSecret(string $id)` | `POST /v1/product/webhooks/{id}/rotate-secret` | 0.1.0 |
+| `test(string $id)` | `POST /v1/product/webhooks/{id}/test` | 0.1.0 |
+| `listDeliveries(string $id, array $query = [])` | `GET /v1/product/webhooks/{id}/deliveries` | 0.1.0 |
+| `Webhooks::verifySignature(string $payload, string $signature, string $secret)` | local (estático) | 0.1.0 (incompatível, ver [Webhooks](#-webhooks)) |
+
+```php
+use CoffeeMail\Payloads\WebhookPayload;
+
+[$webhook, $error] = $client->webhooks->create(WebhookPayload::create(
+    url: 'https://seuapp.com.br/webhooks/coffeemail',
+    events: ['email.delivered', 'email.bounced'],
+));
+```
+
+Eventos aceitos pela API: `email.queued`, `email.processing`, `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.opened`, `email.clicked`, `email.bounced`, `email.complained`, `email.failed`, `email.suppressed`, `email.scheduled`, `email.cancelled`, `email.unsubscribed`, `billing.plan_changed`.
+
+### Métricas — `$client->stats`
+
+| Método | Endpoint | Desde |
+| --- | --- | --- |
+| `get(array $query = [])` | `GET /v1/product/stats` | 0.1.0 |
+
+```php
+[$stats, $error] = $client->stats->get();
+```
+
+## 🔔 Webhooks
+
+A API assina cada entrega assim:
+
+| Header | Conteúdo |
+| --- | --- |
+| `x-webhook-signature` | `sha256=` + `hex(HMAC-SHA256(secret, "{timestamp}.{idempotencyKey}.{body}"))` |
+| `x-webhook-timestamp` | Unix timestamp em segundos |
+| `x-webhook-idempotency-key` | Chave aleatória da entrega |
+| `x-webhook-test` | `true` em entregas disparadas por `webhooks->test()` |
+
+O segredo tem o formato `whsec_...` e pode ser rotacionado com `webhooks->rotateSecret()`. A API trabalha com janela de tolerância de 300 segundos.
+
+`Webhooks::verifySignature($payload, $signature, $secret)` compara `hex(HMAC-SHA256(secret, payload))` em tempo constante, **sem** timestamp, idempotency key nem prefixo `sha256=`, então devolve `false` para entregas reais. Até existir um verificador compatível no SDK, valide manualmente com o corpo bruto da requisição:
+
+```php
+$body = file_get_contents('php://input') ?: '';
+$signature = $_SERVER['HTTP_X_WEBHOOK_SIGNATURE'] ?? '';
+$timestamp = $_SERVER['HTTP_X_WEBHOOK_TIMESTAMP'] ?? '';
+$idempotencyKey = $_SERVER['HTTP_X_WEBHOOK_IDEMPOTENCY_KEY'] ?? '';
 $secret = getenv('COFFEEMAIL_WEBHOOK_SECRET') ?: '';
 
-if (! Webhooks::verifySignature($payload, $signature, $secret)) {
+$expected = 'sha256=' . hash_hmac('sha256', "{$timestamp}.{$idempotencyKey}.{$body}", $secret);
+$isFresh = ctype_digit($timestamp) && abs(time() - (int) $timestamp) <= 300;
+
+if ($secret === '' || ! $isFresh || ! hash_equals($expected, $signature)) {
     http_response_code(401);
-    echo "Assinatura do webhook inválida.";
     exit;
 }
 
-$evento = json_decode($payload, true);
-// Processar evento com segurança...
+$event = json_decode($body, true);
 http_response_code(200);
 ```
 
----
+Use o corpo **bruto**: qualquer re-serialização do JSON invalida a assinatura. Em Laravel, o pacote [coffee-mail-laravel](#laravel) já traz middleware para isso.
 
-## 🛠️ Integração com Laravel
+<a id="laravel"></a>
 
-### 1. Configuração de Credenciais
+### Laravel
 
-Adicione no seu arquivo `config/services.php`:
+Para Laravel existe o pacote dedicado [`coffeemail/coffeemail-laravel`](https://github.com/Coffee-Mail/coffee-mail-laravel), construído sobre este SDK: mail driver para `Mail::to()`/`Mailable`/notificações, facade, configuração por `.env` e middleware de webhook. Prefira-o a registrar o cliente manualmente no container.
 
-```php
-'coffeemail' => [
-    'key' => env('COFFEEMAIL_API_KEY'),
-    'webhook_secret' => env('COFFEEMAIL_WEBHOOK_SECRET'),
-],
-```
+## 🔖 Versionamento e releases
 
-E no seu `.env`:
+- **SemVer.** Na série `0.x`, mudanças incompatíveis podem ocorrer entre minors, mas a regra abaixo vale desde já.
+- **Compatibilidade retroativa.** O SDK está publicado e em uso. A superfície pública (classes, métodos, nomes de parâmetro, propriedades, formatos de retorno) só pode **ganhar** itens ou ser **depreciada** com `@deprecated`; nunca renomeada nem removida. Exemplo em vigor: `broadcasts->delete()` foi mantido e depreciado em vez de removido. Os SDKs oficiais (Node.js, Python, PHP, Java) seguem o mesmo contrato: funcionalidade nova entra em todos.
+- **Publicação.** Um push de tag `v*` dispara [`.github/workflows/release.yml`](.github/workflows/release.yml), que valida o `composer.json`, roda `composer check` em PHP 8.2 e cria o GitHub Release com notas geradas automaticamente. O Packagist lê as tags do repositório. Ao publicar, atualize também `SDK_VERSION` em `src/Http/CurlTransport.php` (usado no `User-Agent`).
+- **Changelog.** Não há `CHANGELOG.md`; o histórico está nas [GitHub Releases](https://github.com/Coffee-Mail/coffee-mail-sdk-php/releases) e no `git log`.
 
-```dotenv
-COFFEEMAIL_API_KEY=cm_live_sua_chave_aqui
-COFFEEMAIL_WEBHOOK_SECRET=whsec_seu_segredo_aqui
-```
-
-### 2. Registro no Service Container
-
-No `app/Providers/AppServiceProvider.php`:
-
-```php
-namespace App\Providers;
-
-use CoffeeMail\CoffeeMail;
-use Illuminate\Support\ServiceProvider;
-
-class AppServiceProvider extends ServiceProvider
-{
-    public function register(): void
-    {
-        $this->app->singleton(CoffeeMail::class, function () {
-            return new CoffeeMail(
-                apiKey: config('services.coffeemail.key'),
-                locale: app()->getLocale() === 'en' ? 'en' : 'pt-BR',
-            );
-        });
-    }
-}
-```
-
-### 3. Injeção de Dependência em Jobs ou Controllers
-
-```php
-namespace App\Jobs;
-
-use CoffeeMail\CoffeeMail;
-use CoffeeMail\Payloads\EmailPayload;
-use Illuminate\Contracts\Queue\ShouldQueue;
-
-class EnviarConfirmacaoJob implements ShouldQueue
-{
-    public function handle(CoffeeMail $coffeeMail): void
-    {
-        [$data, $error] = $coffeeMail->emails->send(new EmailPayload(
-            from: 'noreply@empresa.com.br',
-            to: 'cliente@exemplo.com',
-            subject: 'Conta criada!',
-            html: '<p>Seja bem-vindo!</p>',
-        ));
-
-        if ($error) {
-            throw $error; // Aciona política de retry do Queue Worker do Laravel
-        }
-    }
-}
-```
-
----
-
-## 🌐 Recursos Complementares
-
-| Recurso | Exemplo de Operação | Descrição |
-| --- | --- | --- |
-| **Domínios** | `$client->domains->create(['name' => 'dominio.com.br'])` | Registra domínio e retorna registros DNS (SPF, DKIM, DMARC). |
-| **Verificação** | `$client->domains->verify('dom_123')` | Dispara checagem ativa de propagação DNS. |
-| **Templates** | `$client->templates->preview('tpl_123', ['nome' => 'Ana'])` | Renderiza prévia HTML com variáveis simuladas. |
-| **Audiências** | `$client->audiences->addContact('aud_123', ['email' => 'joao@empresa.com'])` | Insere ou atualiza contato em uma lista de audiência. |
-| **Campanhas** | `$client->broadcasts->send('bc_123')` | Dispara envio de broadcast em massa para todos os inscritos. |
-| **Supressões** | `$client->suppressions->list(['reason' => 'bounce'])` | Consulta e gerencia e-mails suprimidos para proteger sua reputação. |
-| **Métricas** | `$client->stats->get(['from' => '2026-01-01', 'to' => '2026-01-31'])` | Consulta taxas de entrega, abertura, cliques e rejeições. |
-
----
-
-## ⚠️ Tratamento de Erros e Exceções Tipadas
-
-Todas as exceções herdam de `CoffeeMail\Exceptions\CoffeeMailException`:
-
-| Status HTTP | Classe de Exceção | Quando Ocorre |
-| :---: | :--- | :--- |
-| **400** | `ValidationError` | Parâmetros obrigatórios ausentes ou payload em formato inválido. |
-| **401** | `AuthenticationError` | Chave de API inválida, revogada ou ausente. |
-| **402** | `PaymentRequiredError` | Fatura em atraso ou cota de envios do plano esgotada. |
-| **403** | `ForbiddenError` | Escopo de permissão insuficiente para a operação. |
-| **404** | `NotFoundError` | Recurso solicitado não encontrado na organização. |
-| **409** | `ConflictError` | Conflito de estado ou registro duplicado (ex: domínio já existente). |
-| **429** | `RateLimitError` | Limite de requisições por minuto atingido (exibe `$e->retryAfterSeconds`). |
-| **500** | `InternalServerError` | Falha temporária no processamento da API do CoffeeMail. |
-| **0** | `NetworkException` | Falha de resolução DNS, conexão recusada ou timeout cURL. |
-
----
-
-## 🧪 Testes e Qualidade
-
-O SDK conta com suíte de testes automatizados com **Pest PHP** e auditoria estática com **PHPStan Nível 9**:
+## 🧪 Testes e qualidade
 
 ```bash
-# Executar a suíte de testes unitários (Pest PHP)
+composer install
 composer test
-
-# Executar a análise estática em nível estrito (Nível 9)
 composer analyse
-
-# Checagem completa de padrões
 composer check
 ```
 
----
+| Script | Comando | Descrição |
+| --- | --- | --- |
+| `composer test` | `pest` | Suíte Pest (`tests/Unit`), com transporte falso em `tests/Support/FakeTransport.php`. |
+| `composer analyse` | `phpstan analyse --memory-limit=512M` | PHPStan nível 9 sobre `src` e `tests` ([`phpstan.neon`](phpstan.neon)). |
+| `composer lint` | `phpcs` | PSR-12 em `src` e `tests` ([`phpcs.xml`](phpcs.xml)). |
+| `composer format` | `phpcbf` | Corrige automaticamente o que o phpcs apontar. |
+| `composer check:standards` | `php scripts/check-standards.php` | Barra `else`, `elseif` e `switch` em `src`. |
+| `composer check` | `lint` + `analyse` + `test` + `check:standards` | Gate completo, usado no release. |
+
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) roda em push e PR para `main`, em PHP 8.2, 8.3 e 8.4: `composer validate --no-check-lock`, `composer update`, phpcs, PHPStan, Pest e `check:standards`.
+
+## 🗂️ Estrutura do repositório
+
+```text
+src/
+├── CoffeeMail.php              cliente e composição dos recursos
+├── Exceptions/                 CoffeeMailException e subclasses tipadas
+├── Http/                       CoffeeMailResponse, HttpTransportInterface, CurlTransport
+├── I18n/I18n.php               mensagens locais em pt-BR e en
+├── Payloads/                   EmailPayload, AttachmentPayload, DomainPayload, WebhookPayload
+└── Resources/                  Emails, Domains, Senders, Templates, Audiences,
+                                Broadcasts, Suppressions, Webhooks, Stats
+tests/
+├── Support/FakeTransport.php   transporte em memória para os testes
+└── Unit/                       testes por recurso, payloads, envelope e transporte
+scripts/check-standards.php     gate de else/elseif/switch
+.github/workflows/              ci.yml e release.yml
+```
+
+## 🤝 Contribuição
+
+Leia o [CONTRIBUTING.md](CONTRIBUTING.md). Em resumo: código em inglês, documentação, commits e PRs em pt-BR (`tipo(escopo): descrição`); sem `else`/`elseif`/`switch`; sem textos e números mágicos; cada comportamento novo com teste de caminho feliz e ao menos dois de erro; mudanças de API pública discutidas em issue antes do PR.
+
+Vulnerabilidades: **não** abra issue pública; siga o [SECURITY.md](SECURITY.md).
+
+## 🔗 Projetos relacionados
+
+| Repositório | Papel |
+| --- | --- |
+| [coffee-mail-api](https://github.com/Coffee-Mail/coffee-mail-api) | Backend: API HTTP, filas, worker de envio, billing |
+| [coffee-mail-web](https://github.com/Coffee-Mail/coffee-mail-web) | Landing, documentação pública e dashboard |
+| [coffee-mail-sdk-node](https://github.com/Coffee-Mail/coffee-mail-sdk-node) | SDK oficial Node.js/TypeScript (`@coffeemail/node`) |
+| [coffee-mail-sdk-python](https://github.com/Coffee-Mail/coffee-mail-sdk-python) | SDK oficial Python (`coffeemail`) |
+| **coffee-mail-sdk-php** (você está aqui) | SDK oficial PHP (`coffeemail/coffeemail-php`) |
+| [coffee-mail-sdk-java](https://github.com/Coffee-Mail/coffee-mail-sdk-java) | SDK oficial Java (`br.com.coffeemail:coffeemail-java`) |
+| [coffee-mail-laravel](https://github.com/Coffee-Mail/coffee-mail-laravel) | Integração Laravel (`coffeemail/coffeemail-laravel`: mail driver + facade) |
+| [coffee-mail-sdk-workbench](https://github.com/Coffee-Mail/coffee-mail-sdk-workbench) | Bancada de validação dos SDKs por spec |
 
 ## 📄 Licença
 
-Distribuído sob a licença **MIT**. Consulte o arquivo [LICENSE](./LICENSE) para mais detalhes.
+[MIT](LICENSE) © 2026 Dev-Etto.
