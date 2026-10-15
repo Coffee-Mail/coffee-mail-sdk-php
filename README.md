@@ -492,7 +492,7 @@ Para Laravel existe o pacote dedicado [`coffeemail/coffeemail-laravel`](https://
 ## 🔖 Versionamento e releases
 
 - **SemVer.** Na série `0.x`, mudanças incompatíveis podem ocorrer entre minors, mas a regra abaixo vale desde já.
-- **Compatibilidade retroativa.** A partir da `0.2.0`, a superfície pública (classes, métodos, nomes de parâmetro, propriedades, formatos de retorno) só pode **ganhar** itens ou ser **depreciada** com `@deprecated`; nunca renomeada nem removida. A `0.2.0` foi a exceção: quebrou a `0.1.0` para corrigir o contrato enquanto ainda não havia usuários ativos. Os SDKs oficiais (Node.js, Python, PHP, Java, Go) seguem o mesmo contrato: funcionalidade nova entra em todos.
+- **Compatibilidade retroativa.** A partir da `0.2.0`, a superfície pública (classes, métodos, nomes de parâmetro, propriedades, formatos de retorno) só pode **ganhar** itens ou ser **depreciada** com `@deprecated`; nunca renomeada nem removida. A `0.2.0` foi a exceção: quebrou a `0.1.0` para corrigir o contrato enquanto ainda não havia usuários ativos. Os SDKs oficiais (Node.js, Python, PHP, Java, Go, Ruby) seguem o mesmo contrato: funcionalidade nova entra em todos.
 - **Publicação.** Um push de tag `v*` dispara [`.github/workflows/release.yml`](.github/workflows/release.yml), que valida o `composer.json`, roda `composer check` em PHP 8.2 e cria o GitHub Release com notas geradas automaticamente. O Packagist lê as tags do repositório. A versão fica em `CoffeeMail\Version::VALUE` (usada no `User-Agent`); `composer check:version` confere se ela tem seção no `CHANGELOG.md` e, no release, se bate com a tag.
 - **Changelog.** [CHANGELOG.md](CHANGELOG.md), no formato Keep a Changelog.
 
@@ -554,6 +554,7 @@ Vulnerabilidades: **não** abra issue pública; siga o [SECURITY.md](SECURITY.md
 | **coffee-mail-sdk-php** (você está aqui) | SDK oficial PHP (`coffeemail/coffeemail-php`) |
 | [coffee-mail-sdk-java](https://github.com/Coffee-Mail/coffee-mail-sdk-java) | SDK oficial Java (`br.com.coffeemail:coffeemail-java`) |
 | [coffee-mail-sdk-go](https://github.com/Coffee-Mail/coffee-mail-sdk-go) | SDK oficial Go (`github.com/Coffee-Mail/coffee-mail-sdk-go`) |
+| [coffee-mail-sdk-ruby](https://github.com/Coffee-Mail/coffee-mail-sdk-ruby) | SDK oficial Ruby (`coffeemail`) |
 | [coffee-mail-laravel](https://github.com/Coffee-Mail/coffee-mail-laravel) | Integração Laravel (`coffeemail/coffeemail-laravel`: mail driver + facade) |
 | [coffee-mail-sdk-workbench](https://github.com/Coffee-Mail/coffee-mail-sdk-workbench) | Bancada de validação dos SDKs por spec |
 
