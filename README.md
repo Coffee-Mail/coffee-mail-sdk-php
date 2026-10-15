@@ -46,16 +46,10 @@
 
 ## 🚦 Status do projeto
 
-Pré-1.0 (`0.1.x`). Leia antes de usar em produção:
+Pré-1.0 (`0.2.x` em `main`, ainda não publicada). Leia antes de usar em produção:
 
 - **`main` está à frente da versão publicada.** O Packagist tem só a `v0.1.0` (publicada em 2026-10-08, commit `1c7e38a`). Tudo o que está marcado como _não publicado_ na [Referência](#-referência) só existe em `main` (`0.1.x-dev`). A `v0.1.0` também foi registrada no Packagist como licença `proprietary`; a adoção da MIT veio depois e entra no próximo release.
-- **`Webhooks::verifySignature()` não valida as entregas reais da API.** O SDK calcula `hex(HMAC-SHA256(secret, body))`, mas a API assina `"{timestamp}.{idempotencyKey}.{body}"` com prefixo `sha256=` e envia o resultado no header `x-webhook-signature`. Até o SDK ganhar um verificador compatível, use a verificação manual descrita em [Webhooks](#-webhooks).
-- **`audiences->bulkAddContacts()` envia o formato errado.** O SDK manda a lista crua; a API espera `{ "contacts": [...] }` e responde 400.
-- **`WebhookPayload` aceita `name`, mas a API rejeita esse campo** (`additionalProperties: false`). Não preencha `name`.
-- **Campos de envio não repassados.** `emails->send()` só encaminha `from`, `to`, `cc`, `bcc`, `replyTo`, `subject`, `html`, `text`, `templateId`, `variables`, `headers`, `tags`, `scheduledAt` e `attachments`. `metadata`, `emailType` e `suppressionCategory` (aceitos pela API) são descartados.
-- **`subject` é obrigatório no SDK** mesmo em envio por `templateId`, embora a API o aceite opcional.
-- **`suppressions->get()` e `suppressions->delete()`** nomeiam o parâmetro `$email`, mas a API espera o **ID** da supressão.
-- **`broadcasts->delete()` está depreciado.** A API não tem exclusão de campanha; o método devolve `ValidationError` sem chamada de rede. Use `cancel()`.
+- **A `0.2.0` quebra a API da `0.1.0`** (ainda não havia usuários ativos): `Webhooks::verifySignature()` passou a usar o algoritmo da API, `broadcasts->delete()`, `audiences->addContact()` e `removeContact()` saíram, e os erros mudaram de forma. Veja o [CHANGELOG](CHANGELOG.md).
 - **Sem retry automático.** `RateLimitError` expõe `retryAfterSeconds`, mas a nova tentativa é por sua conta.
 - **URL base fixa** em `https://api.coffeemail.com.br`. Não há opção para apontar a outro host; para isso, injete um `HttpTransportInterface` próprio.
 
@@ -172,6 +166,8 @@ try {
     $details = $e->details;
 } catch (CoffeeMailException $e) {
     $code = $e->errorCode;
+    $apiCode = $e->apiCode;
+    $requestId = $e->requestId;
 }
 ```
 
@@ -185,22 +181,30 @@ Todas ficam em `CoffeeMail\Exceptions` e estendem `CoffeeMailException` (que est
 | `AuthenticationError` | 401 | `UNAUTHORIZED` | Chave inválida, revogada ou ausente. |
 | `PaymentRequiredError` | 402 | `PAYMENT_REQUIRED` | Cota do plano esgotada ou recurso bloqueado pelo plano. |
 | `ForbiddenError` | 403 | `FORBIDDEN` | Chave sem a permissão exigida pela rota. |
+| `PermissionError` | 403 | `PERMISSION_DENIED` | Chave sem `full_access` em operações de campanha (`requiredPermission`). |
 | `NotFoundError` | 404 | `NOT_FOUND` | Recurso inexistente na organização. |
 | `ConflictError` | 409 | `CONFLICT` | Conflito de estado ou duplicidade. |
 | `RateLimitError` | 429 | `RATE_LIMIT_EXCEEDED` | Limite de requisições. `retryAfterSeconds` vem do header `Retry-After` (`null` se ausente). |
-| `InternalServerError` | 500 | `INTERNAL_ERROR` | Qualquer outro status `>= 400` (inclusive 413, 422, 5xx). |
+| `InternalServerError` | 500, 502, 503, 504 | `INTERNAL_SERVER_ERROR` | Erro do servidor; `status` traz o status real. |
+| `CoffeeMailException` | outro (ex.: 422) | código da API ou `API_ERROR` | Status sem classe própria. |
+| `CoffeeMailException` | 2xx | `INVALID_RESPONSE` | Resposta de sucesso com JSON ilegível. |
 | `NetworkException` | 0 | `NETWORK_ERROR` | Falha de DNS/conexão, timeout ou `curl_init` indisponível. |
 
-Propriedades comuns: `status` (int, fixo por classe), `errorCode` (string, fixo por classe; também acessível como `$e->code` e `getErrorCode()`), `details` (o campo `details` do corpo de erro da API) e `getMessage()` (mensagem da API, ou mensagem localizada do SDK). `getCode()` devolve o status inteiro.
+Propriedades comuns:
 
-> Para `InternalServerError`, `status` é sempre `500`. O status real (ex.: `422`, `503`) está em `$response->statusCode`.
+- `errorCode`: código canônico, igual em todos os SDKs oficiais (constantes em `ErrorCodes`; também acessível como `$e->code` e `getErrorCode()`).
+- `apiCode`: código original da API (ex.: um `429` pode ser `RATE_LIMIT_EXCEEDED` ou `PLAN_QUOTA_EXCEEDED`).
+- `status`: status HTTP. `getCode()` devolve o mesmo inteiro.
+- `details`: `array` com `meta` e `details` do corpo de erro da API (em validação, `details['issues']` lista os campos inválidos).
+- `requestId`: valor do header `x-request-id`, quando a API envia.
+- `getMessage()`: mensagem da API ou, na falta dela, a mensagem localizada do SDK.
 
 ### O que lança fora do envelope
 
 | Situação | Exceção |
 | --- | --- |
 | `new CoffeeMail()` sem chave e sem `COFFEEMAIL_API_KEY` | `AuthenticationError` |
-| `emails->send()` / `sendBatch()` sem `from`, `to` ou `subject`, ou com participante em formato inválido | `ValidationError` |
+| `emails->send()` / `sendBatch()` sem `from` ou `to`, sem `subject` quando não há `templateId`, com `templateId` e `html`/`text` juntos (ou sem nenhum dos dois), ou com participante em formato inválido | `ValidationError` |
 | `AttachmentPayload::fromPath()` com arquivo inexistente ou ilegível | `InvalidArgumentException` |
 
 ## 📚 Referência
@@ -226,11 +230,14 @@ Campos de `send()` (array ou `EmailPayload`):
 | --- | --- | --- |
 | `from` | `string\|array{email, name?}` | Obrigatório. |
 | `to` | `string\|list<string>\|list<array{email, name?}>` | Obrigatório. A API aceita de 1 a 50. |
-| `subject` | `string` | Obrigatório no SDK. |
-| `html`, `text` | `?string` | Até 100 KB cada. |
+| `subject` | `?string` | Obrigatório quando não há `templateId`. |
+| `html`, `text` | `?string` | Até 100 KB cada. Use `html`/`text` com `subject` **ou** `templateId`, nunca os dois. |
 | `cc`, `bcc` | como `to` | Até 50 cada. |
 | `replyTo` | `string\|array{email, name?}` | A API aceita um único endereço. |
-| `templateId`, `variables` | `string`, `array` | Só no formato array; `EmailPayload` não tem esses campos. |
+| `templateId`, `variables` | `string`, `array` | Envio por template salvo. |
+| `metadata` | `array<string, mixed>` | Metadados livres, devolvidos nos webhooks. |
+| `emailType` | `'transactional'\|'broadcast'` | Categoria do envio para rastreio e supressão. |
+| `suppressionCategory` | `string` | Categoria usada na checagem da lista de supressão (até 100 caracteres). |
 | `headers` | `array<string, string>` | Cabeçalhos SMTP customizados. |
 | `tags` | `list<array{name, value}>` | Até 10. É o formato exigido pela API; o SDK repassa sem converter. |
 | `attachments` | `list<AttachmentPayload\|array>` | Até 10. |
@@ -257,9 +264,9 @@ use CoffeeMail\Payloads\EmailPayload;
 [$data, $error] = $client->emails->send([
     'from' => 'contato@seudominio.com.br',
     'to' => 'cliente@exemplo.com',
-    'subject' => 'Bem-vindo',
     'templateId' => $templateId,
     'variables' => ['nome' => 'Ana'],
+    'metadata' => ['pedido' => 123],
     'scheduledAt' => new DateTimeImmutable('+1 hour'),
 ]);
 ```
@@ -302,7 +309,7 @@ Remetente verificado por endereço, alternativa a verificar o domínio inteiro.
 
 | Método | Endpoint | Desde |
 | --- | --- | --- |
-| `create(string $email, string $displayName)` | `POST /v1/product/senders` | main |
+| `create(string $email, ?string $displayName = null)` | `POST /v1/product/senders` | main |
 | `list()` | `GET /v1/product/senders` | main |
 | `verify(string $token)` | `POST /v1/product/senders/verify` | main |
 | `delete(string $id)` | `DELETE /v1/product/senders/{id}` | main |
@@ -344,18 +351,27 @@ Remetente verificado por endereço, alternativa a verificar o domínio inteiro.
 | `create(array $payload)` | `POST /v1/product/audiences` | 0.1.0 |
 | `list(array $query = [])` | `GET /v1/product/audiences` | 0.1.0 |
 | `get(string $id)` | `GET /v1/product/audiences/{id}` | 0.1.0 |
+| `update(string $id, array $payload)` | `PUT /v1/product/audiences/{id}` | 0.2.0 |
 | `delete(string $id)` | `DELETE /v1/product/audiences/{id}` | 0.1.0 |
-| `listContacts(string $audienceId, array $query = [])` | `GET /v1/product/audiences/{id}/contacts` | 0.1.0 |
-| `addContact(string $audienceId, array $payload)` | `POST /v1/product/audiences/{id}/contacts` | 0.1.0 |
-| `bulkAddContacts(string $audienceId, array $contacts)` | `POST /v1/product/audiences/{id}/contacts/bulk` | 0.1.0 (quebrado, ver [Status](#-status-do-projeto)) |
-| `removeContact(string $audienceId, string $contactId)` | `DELETE /v1/product/audiences/{id}/contacts/{contactId}` | 0.1.0 |
+| `listContacts()` / `createContact()` / `bulkAddContacts()` | atalhos para `contacts->list()` / `create()` / `bulkAdd()` | 0.2.0 |
+
+Contatos — `$client->audiences->contacts`:
+
+| Método | Endpoint | Desde |
+| --- | --- | --- |
+| `create(string $audienceId, array $payload)` | `POST /v1/product/audiences/{id}/contacts` (`email`, `firstName`, `lastName`, `metadata`) | 0.2.0 |
+| `list(string $audienceId, array $query = [])` | `GET /v1/product/audiences/{id}/contacts` (`limit`, `offset`) | 0.2.0 |
+| `bulkAdd(string $audienceId, array $contacts)` | `POST /v1/product/audiences/{id}/contacts/bulk` (corpo `{ contacts }`, até 10 000) | 0.2.0 |
+| `update(string $audienceId, string $contactId, array $payload)` | `PUT /v1/product/audiences/{id}/contacts/{contactId}` | 0.2.0 |
+| `delete(string $audienceId, string $contactId)` | `DELETE /v1/product/audiences/{id}/contacts/{contactId}` | 0.2.0 |
 
 ```php
 [$audience, $error] = $client->audiences->create(['name' => 'Clientes VIP']);
-[$contact, $error] = $client->audiences->addContact($audience['id'], ['email' => 'vip@exemplo.com']);
+[$contact, $error] = $client->audiences->contacts->create($audience['id'], [
+    'email' => 'vip@exemplo.com',
+    'firstName' => 'Ana',
+]);
 ```
-
-A API também expõe `PUT /audiences/{id}` e `PUT /audiences/{id}/contacts/{contactId}`, ainda sem método no SDK.
 
 ### Campanhas — `$client->broadcasts`
 
@@ -367,7 +383,8 @@ A API também expõe `PUT /audiences/{id}` e `PUT /audiences/{id}/contacts/{cont
 | `send(string $id)` | `POST /v1/product/broadcasts/{id}/send` | 0.1.0 |
 | `cancel(string $id)` | `POST /v1/product/broadcasts/{id}/cancel` | 0.1.0 |
 | `testSend(string $id, array $payload)` | `POST /v1/product/broadcasts/{id}/test-send` | main |
-| `delete(string $id)` | nenhum (depreciado, devolve `ValidationError` sem rede) | 0.1.0 |
+
+Todas exigem chave `full_access`; sem ela, o erro é `PermissionError` (`PERMISSION_DENIED`). A API não tem exclusão de campanha: use `cancel()`.
 
 ```php
 [$result, $error] = $client->broadcasts->send($broadcastId);
@@ -378,13 +395,11 @@ A API também expõe `PUT /audiences/{id}` e `PUT /audiences/{id}/contacts/{cont
 | Método | Endpoint | Desde |
 | --- | --- | --- |
 | `list(array $query = [])` | `GET /v1/product/suppressions` | 0.1.0 |
-| `get(string $email)` | `GET /v1/product/suppressions/{id}` | 0.1.0 |
+| `get(string $id)` | `GET /v1/product/suppressions/{id}` | 0.1.0 |
 | `create(array $payload)` | `POST /v1/product/suppressions` | 0.1.0 |
-| `delete(string $email)` | `DELETE /v1/product/suppressions/{id}` | 0.1.0 |
+| `delete(string $id)` | `DELETE /v1/product/suppressions/{id}` | 0.1.0 |
 | `reactivate(string $id)` | `POST /v1/product/suppressions/{id}/reactivate` | main |
 | `bulkCreate(array $suppressions)` | `POST /v1/product/suppressions/bulk` (corpo `{ suppressions }`) | main |
-
-Em `get()` e `delete()`, passe o ID da supressão (o nome `$email` do parâmetro é herdado e não reflete o que a API espera).
 
 ```php
 [$page, $error] = $client->suppressions->list(['limit' => 50]);
@@ -397,13 +412,13 @@ Em `get()` e `delete()`, passe o ID da supressão (o nome `$email` do parâmetro
 | `create(array\|WebhookPayload $payload)` | `POST /v1/product/webhooks` | 0.1.0 |
 | `list(array $query = [])` | `GET /v1/product/webhooks` | 0.1.0 |
 | `get(string $id)` | `GET /v1/product/webhooks/{id}` | 0.1.0 |
-| `update(string $id, array $payload)` | `PATCH /v1/product/webhooks/{id}` | 0.1.0 |
+| `update(string $id, array $payload)` | `PUT /v1/product/webhooks/{id}` | 0.1.0 (verbo corrigido na 0.2.0) |
 | `delete(string $id)` | `DELETE /v1/product/webhooks/{id}` | 0.1.0 |
 | `toggle(string $id, bool $enabled)` | `PATCH /v1/product/webhooks/{id}` com `status` `active`/`paused` | 0.1.0 (endpoint corrigido em main) |
 | `rotateSecret(string $id)` | `POST /v1/product/webhooks/{id}/rotate-secret` | 0.1.0 |
 | `test(string $id)` | `POST /v1/product/webhooks/{id}/test` | 0.1.0 |
 | `listDeliveries(string $id, array $query = [])` | `GET /v1/product/webhooks/{id}/deliveries` | 0.1.0 |
-| `Webhooks::verifySignature(string $payload, string $signature, string $secret)` | local (estático) | 0.1.0 (incompatível, ver [Webhooks](#-webhooks)) |
+| `Webhooks::verifySignature(string $payload, string $secret, array $headers = [], ...)` | local (estático) | 0.2.0 (ver [Webhooks](#-webhooks)) |
 
 ```php
 use CoffeeMail\Payloads\WebhookPayload;
@@ -411,8 +426,11 @@ use CoffeeMail\Payloads\WebhookPayload;
 [$webhook, $error] = $client->webhooks->create(WebhookPayload::create(
     url: 'https://seuapp.com.br/webhooks/coffeemail',
     events: ['email.delivered', 'email.bounced'],
+    description: 'Webhook principal',
 ));
 ```
+
+`WebhookPayload` tem só os campos do contrato: `url`, `events` e `description`.
 
 Eventos aceitos pela API: `email.queued`, `email.processing`, `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.opened`, `email.clicked`, `email.bounced`, `email.complained`, `email.failed`, `email.suppressed`, `email.scheduled`, `email.cancelled`, `email.unsubscribed`, `billing.plan_changed`.
 
@@ -439,26 +457,29 @@ A API assina cada entrega assim:
 
 O segredo tem o formato `whsec_...` e pode ser rotacionado com `webhooks->rotateSecret()`. A API trabalha com janela de tolerância de 300 segundos.
 
-`Webhooks::verifySignature($payload, $signature, $secret)` compara `hex(HMAC-SHA256(secret, payload))` em tempo constante, **sem** timestamp, idempotency key nem prefixo `sha256=`, então devolve `false` para entregas reais. Até existir um verificador compatível no SDK, valide manualmente com o corpo bruto da requisição:
+Valide com `Webhooks::verifySignature()`, passando o corpo **bruto** e os cabeçalhos da requisição:
 
 ```php
+use CoffeeMail\Resources\Webhooks;
+
 $body = file_get_contents('php://input') ?: '';
-$signature = $_SERVER['HTTP_X_WEBHOOK_SIGNATURE'] ?? '';
-$timestamp = $_SERVER['HTTP_X_WEBHOOK_TIMESTAMP'] ?? '';
-$idempotencyKey = $_SERVER['HTTP_X_WEBHOOK_IDEMPOTENCY_KEY'] ?? '';
-$secret = getenv('COFFEEMAIL_WEBHOOK_SECRET') ?: '';
+$headers = function_exists('getallheaders') ? getallheaders() : [];
 
-$expected = 'sha256=' . hash_hmac('sha256', "{$timestamp}.{$idempotencyKey}.{$body}", $secret);
-$isFresh = ctype_digit($timestamp) && abs(time() - (int) $timestamp) <= 300;
-
-if ($secret === '' || ! $isFresh || ! hash_equals($expected, $signature)) {
+if (! Webhooks::verifySignature($body, getenv('COFFEEMAIL_WEBHOOK_SECRET') ?: '', $headers)) {
     http_response_code(401);
     exit;
 }
 
 $event = json_decode($body, true);
-http_response_code(200);
+http_response_code(204);
 ```
+
+- Os nomes de cabeçalho são comparados sem diferenciar maiúsculas; valores em lista (como `$request->headers->all()` do Symfony/Laravel) são aceitos.
+- Também dá para passar os valores direto: `verifySignature($body, $secret, signature: ..., timestamp: ..., idempotencyKey: ...)`.
+- `toleranceSeconds` (padrão 300) ajusta a janela; `now` fixa o relógio em testes.
+- `WebhookVerifier::sign($body, $secret, $timestamp, $idempotencyKey)` calcula a assinatura esperada, útil para testar o seu endpoint.
+- A comparação é exata e em tempo constante (hex maiúsculo é rejeitado). O SDK passa nos vetores de teste gerados pelo assinador da API (`tests/Fixtures/webhook-vectors.json`).
+- `x-webhook-idempotency-key` muda a cada tentativa de entrega; não serve para deduplicar retentativas.
 
 Use o corpo **bruto**: qualquer re-serialização do JSON invalida a assinatura. Em Laravel, o pacote [coffee-mail-laravel](#laravel) já traz middleware para isso.
 
@@ -471,9 +492,9 @@ Para Laravel existe o pacote dedicado [`coffeemail/coffeemail-laravel`](https://
 ## 🔖 Versionamento e releases
 
 - **SemVer.** Na série `0.x`, mudanças incompatíveis podem ocorrer entre minors, mas a regra abaixo vale desde já.
-- **Compatibilidade retroativa.** O SDK está publicado e em uso. A superfície pública (classes, métodos, nomes de parâmetro, propriedades, formatos de retorno) só pode **ganhar** itens ou ser **depreciada** com `@deprecated`; nunca renomeada nem removida. Exemplo em vigor: `broadcasts->delete()` foi mantido e depreciado em vez de removido. Os SDKs oficiais (Node.js, Python, PHP, Java, Go) seguem o mesmo contrato: funcionalidade nova entra em todos.
-- **Publicação.** Um push de tag `v*` dispara [`.github/workflows/release.yml`](.github/workflows/release.yml), que valida o `composer.json`, roda `composer check` em PHP 8.2 e cria o GitHub Release com notas geradas automaticamente. O Packagist lê as tags do repositório. Ao publicar, atualize também `SDK_VERSION` em `src/Http/CurlTransport.php` (usado no `User-Agent`).
-- **Changelog.** Não há `CHANGELOG.md`; o histórico está nas [GitHub Releases](https://github.com/Coffee-Mail/coffee-mail-sdk-php/releases) e no `git log`.
+- **Compatibilidade retroativa.** A partir da `0.2.0`, a superfície pública (classes, métodos, nomes de parâmetro, propriedades, formatos de retorno) só pode **ganhar** itens ou ser **depreciada** com `@deprecated`; nunca renomeada nem removida. A `0.2.0` foi a exceção: quebrou a `0.1.0` para corrigir o contrato enquanto ainda não havia usuários ativos. Os SDKs oficiais (Node.js, Python, PHP, Java, Go) seguem o mesmo contrato: funcionalidade nova entra em todos.
+- **Publicação.** Um push de tag `v*` dispara [`.github/workflows/release.yml`](.github/workflows/release.yml), que valida o `composer.json`, roda `composer check` em PHP 8.2 e cria o GitHub Release com notas geradas automaticamente. O Packagist lê as tags do repositório. A versão fica em `CoffeeMail\Version::VALUE` (usada no `User-Agent`); `composer check:version` confere se ela tem seção no `CHANGELOG.md` e, no release, se bate com a tag.
+- **Changelog.** [CHANGELOG.md](CHANGELOG.md), no formato Keep a Changelog.
 
 ## 🧪 Testes e qualidade
 
@@ -500,16 +521,21 @@ CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) roda em push e PR pa
 ```text
 src/
 ├── CoffeeMail.php              cliente e composição dos recursos
-├── Exceptions/                 CoffeeMailException e subclasses tipadas
-├── Http/                       CoffeeMailResponse, HttpTransportInterface, CurlTransport
+├── Version.php                 versão do SDK (User-Agent)
+├── Exceptions/                 CoffeeMailException, subclasses tipadas e ErrorCodes
+├── Http/                       CoffeeMailResponse, HttpTransportInterface, CurlTransport,
+│                               ResponseParser e ErrorMapper
 ├── I18n/I18n.php               mensagens locais em pt-BR e en
 ├── Payloads/                   EmailPayload, AttachmentPayload, DomainPayload, WebhookPayload
-└── Resources/                  Emails, Domains, Senders, Templates, Audiences,
-                                Broadcasts, Suppressions, Webhooks, Stats
+├── Resources/                  Emails, Domains, Senders, Templates, Audiences, Contacts,
+│                               Broadcasts, Suppressions, Webhooks, Stats
+└── Webhooks/WebhookVerifier.php verificação de assinatura de webhook
 tests/
+├── Fixtures/                   vetores de webhook gerados pelo assinador da API
 ├── Support/FakeTransport.php   transporte em memória para os testes
-└── Unit/                       testes por recurso, payloads, envelope e transporte
+└── Unit/                       testes por recurso, payloads, envelope, erros e transporte
 scripts/check-standards.php     gate de else/elseif/switch
+scripts/check-version-sync.php  gate de versão (Version::VALUE, CHANGELOG, tag)
 .github/workflows/              ci.yml e release.yml
 ```
 

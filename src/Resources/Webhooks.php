@@ -7,6 +7,7 @@ namespace CoffeeMail\Resources;
 use CoffeeMail\Http\CoffeeMailResponse;
 use CoffeeMail\Http\HttpTransportInterface;
 use CoffeeMail\Payloads\WebhookPayload;
+use CoffeeMail\Webhooks\WebhookVerifier;
 
 final class Webhooks
 {
@@ -50,14 +51,14 @@ final class Webhooks
     }
 
     /**
-     * Atualiza configurações de um webhook existente.
+     * Atualiza configurações de um webhook existente (PUT com campos parciais).
      *
      * @param array<string, mixed> $payload
      * @return CoffeeMailResponse<mixed>
      */
     public function update(string $id, array $payload): CoffeeMailResponse
     {
-        return $this->http->patch('/v1/product/webhooks/' . rawurlencode($id), $payload);
+        return $this->http->put('/v1/product/webhooks/' . rawurlencode($id), $payload);
     }
 
     /**
@@ -114,17 +115,32 @@ final class Webhooks
     }
 
     /**
-     * Valida a autenticidade de um webhook recebido via HMAC SHA-256.
-     * Protege contra requisições forjadas e ataques de temporização (timing attacks).
+     * Verifica a assinatura de uma entrega de webhook (algoritmo da API: `sha256=` +
+     * HMAC-SHA256 de `timestamp.idempotencyKey.corpoBruto`, janela de 300s).
+     *
+     * Passe os cabeçalhos da requisição em `$headers` ou os valores explícitos.
+     *
+     * @param array<array-key, mixed> $headers
      */
-    public static function verifySignature(string $payload, string $signature, string $secret): bool
-    {
-        if ($payload === '' || $signature === '' || $secret === '') {
-            return false;
-        }
-
-        $computed = hash_hmac('sha256', $payload, $secret);
-
-        return hash_equals($computed, $signature);
+    public static function verifySignature(
+        string $payload,
+        string $secret,
+        array $headers = [],
+        ?string $signature = null,
+        ?string $timestamp = null,
+        ?string $idempotencyKey = null,
+        int $toleranceSeconds = WebhookVerifier::DEFAULT_TOLERANCE_SECONDS,
+        ?int $now = null,
+    ): bool {
+        return WebhookVerifier::verify(
+            $payload,
+            $secret,
+            $headers,
+            $signature,
+            $timestamp,
+            $idempotencyKey,
+            $toleranceSeconds,
+            $now,
+        );
     }
 }

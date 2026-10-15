@@ -15,11 +15,14 @@ final class EmailPayload implements PayloadInterface
      * @param array<string, string>|null $headers
      * @param list<AttachmentPayload|array<string, mixed>>|null $attachments
      * @param list<string>|array<string, string>|null $tags
+     * @param array<string, mixed>|null $variables
+     * @param array<string, mixed>|null $metadata
+     * @param 'transactional'|'broadcast'|null $emailType
      */
     public function __construct(
         public readonly string|array $from,
         public readonly string|array $to,
-        public readonly string $subject,
+        public readonly ?string $subject = null,
         public readonly ?string $html = null,
         public readonly ?string $text = null,
         public readonly string|array|null $cc = null,
@@ -31,6 +34,11 @@ final class EmailPayload implements PayloadInterface
         public readonly ?string $idempotencyKey = null,
         public readonly ?bool $isSandbox = null,
         public readonly ?string $scheduledAt = null,
+        public readonly ?string $templateId = null,
+        public readonly ?array $variables = null,
+        public readonly ?array $metadata = null,
+        public readonly ?string $emailType = null,
+        public readonly ?string $suppressionCategory = null,
     ) {
     }
 
@@ -43,11 +51,14 @@ final class EmailPayload implements PayloadInterface
      * @param array<string, string>|null $headers
      * @param list<AttachmentPayload|array<string, mixed>>|null $attachments
      * @param list<string>|array<string, string>|null $tags
+     * @param array<string, mixed>|null $variables
+     * @param array<string, mixed>|null $metadata
+     * @param 'transactional'|'broadcast'|null $emailType
      */
     public static function create(
         string|array $from,
         string|array $to,
-        string $subject,
+        ?string $subject = null,
         ?string $html = null,
         ?string $text = null,
         string|array|null $cc = null,
@@ -59,6 +70,11 @@ final class EmailPayload implements PayloadInterface
         ?string $idempotencyKey = null,
         ?bool $isSandbox = null,
         ?string $scheduledAt = null,
+        ?string $templateId = null,
+        ?array $variables = null,
+        ?array $metadata = null,
+        ?string $emailType = null,
+        ?string $suppressionCategory = null,
     ): self {
         return new self(
             from: $from,
@@ -75,6 +91,11 @@ final class EmailPayload implements PayloadInterface
             idempotencyKey: $idempotencyKey,
             isSandbox: $isSandbox,
             scheduledAt: $scheduledAt,
+            templateId: $templateId,
+            variables: $variables,
+            metadata: $metadata,
+            emailType: $emailType,
+            suppressionCategory: $suppressionCategory,
         );
     }
 
@@ -86,8 +107,22 @@ final class EmailPayload implements PayloadInterface
         $payload = [
             'from' => $this->from,
             'to' => $this->to,
-            'subject' => $this->subject,
         ];
+
+        $optional = [
+            'subject' => $this->subject,
+            'templateId' => $this->templateId,
+            'variables' => $this->variables,
+            'metadata' => $this->metadata,
+            'emailType' => $this->emailType,
+            'suppressionCategory' => $this->suppressionCategory,
+        ];
+
+        foreach ($optional as $field => $value) {
+            if ($value !== null) {
+                $payload[$field] = $value;
+            }
+        }
 
         if ($this->html !== null) {
             $payload['html'] = $this->html;

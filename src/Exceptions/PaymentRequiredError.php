@@ -8,17 +8,24 @@ use Throwable;
 
 final class PaymentRequiredError extends CoffeeMailException
 {
+    /**
+     * @param array<string, mixed> $details
+     */
     public function __construct(
-        string $message = 'Limite de cota atingido ou pagamento pendente.',
-        mixed $details = null,
+        string $message = 'Cota do plano esgotada.',
+        array $details = [],
         ?Throwable $previous = null,
+        ?string $apiCode = null,
+        ?string $requestId = null,
     ) {
         parent::__construct(
             message: $message,
             status: 402,
-            errorCode: 'PAYMENT_REQUIRED',
+            errorCode: ErrorCodes::PAYMENT_REQUIRED,
             details: $details,
             previous: $previous,
+            apiCode: $apiCode,
+            requestId: $requestId,
         );
     }
 }

@@ -13,6 +13,18 @@ use DateTimeInterface;
 
 final class Emails
 {
+    private const PASSTHROUGH_FIELDS = [
+        'html',
+        'text',
+        'templateId',
+        'variables',
+        'headers',
+        'tags',
+        'metadata',
+        'emailType',
+        'suppressionCategory',
+    ];
+
     public function __construct(
         private readonly HttpTransportInterface $http,
     ) {
@@ -135,14 +147,13 @@ final class Emails
             throw new ValidationError('O campo `to` é obrigatório para envio de e-mail.');
         }
 
-        if (! isset($payload['subject']) || ! is_string($payload['subject'])) {
-            throw new ValidationError('O campo `subject` é obrigatório para envio de e-mail.');
-        }
+        $this->assertContent($payload);
 
+        $subject = $payload['subject'] ?? null;
         $body = [
             'from' => $this->normalizeParticipant($payload['from']),
             'to' => $this->normalizeList($payload['to']),
-            'subject' => $payload['subject'],
+            ...(is_string($subject) ? ['subject' => $subject] : []),
         ];
 
         if (isset($payload['cc'])) {
@@ -157,7 +168,7 @@ final class Emails
             $body['replyTo'] = $this->normalizeParticipant($payload['replyTo']);
         }
 
-        foreach (['html', 'text', 'templateId', 'variables', 'headers', 'tags'] as $field) {
+        foreach (self::PASSTHROUGH_FIELDS as $field) {
             if (isset($payload[$field])) {
                 $body[$field] = $payload[$field];
             }
@@ -176,6 +187,28 @@ final class Emails
         }
 
         return $body;
+    }
+
+    /**
+     * Regra da API: `html`/`text` com `subject`, ou `templateId`, mas não os dois.
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function assertContent(array $payload): void
+    {
+        $hasTemplate = isset($payload['templateId']);
+        $hasContent = isset($payload['html']) || isset($payload['text']);
+
+        if ($hasTemplate === $hasContent) {
+            throw new ValidationError(
+                'Informe `html`/`text` com `subject`, ou `templateId`, mas não os dois.'
+            );
+        }
+
+        $hasSubject = isset($payload['subject']) && is_string($payload['subject']);
+        if (! $hasTemplate && ! $hasSubject) {
+            throw new ValidationError('O campo `subject` é obrigatório quando o envio não usa `templateId`.');
+        }
     }
 
     /**
@@ -233,7 +266,7 @@ final class Emails
         if (!$isValidArray) {
             throw new ValidationError(
                 'Participante de e-mail inválido: esperado string ou array com chave `email`.',
-                $input
+                ['participant' => $input],
             );
         }
 

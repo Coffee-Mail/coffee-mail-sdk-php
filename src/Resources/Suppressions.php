@@ -26,13 +26,13 @@ final class Suppressions
     }
 
     /**
-     * Consulta se um endereço de e-mail específico está na lista de supressão.
+     * Obtém uma supressão pelo ID.
      *
      * @return CoffeeMailResponse<mixed>
      */
-    public function get(string $email): CoffeeMailResponse
+    public function get(string $id): CoffeeMailResponse
     {
-        return $this->http->get('/v1/product/suppressions/' . rawurlencode($email));
+        return $this->http->get('/v1/product/suppressions/' . rawurlencode($id));
     }
 
     /**
@@ -47,13 +47,13 @@ final class Suppressions
     }
 
     /**
-     * Remove um endereço de e-mail da lista de supressão.
+     * Remove uma supressão pelo ID.
      *
      * @return CoffeeMailResponse<mixed>
      */
-    public function delete(string $email): CoffeeMailResponse
+    public function delete(string $id): CoffeeMailResponse
     {
-        return $this->http->delete('/v1/product/suppressions/' . rawurlencode($email));
+        return $this->http->delete('/v1/product/suppressions/' . rawurlencode($id));
     }
 
     /**

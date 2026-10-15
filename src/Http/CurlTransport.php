@@ -4,22 +4,13 @@ declare(strict_types=1);
 
 namespace CoffeeMail\Http;
 
-use CoffeeMail\Exceptions\AuthenticationError;
-use CoffeeMail\Exceptions\CoffeeMailException;
-use CoffeeMail\Exceptions\ConflictError;
-use CoffeeMail\Exceptions\ForbiddenError;
-use CoffeeMail\Exceptions\InternalServerError;
 use CoffeeMail\Exceptions\NetworkException;
-use CoffeeMail\Exceptions\NotFoundError;
-use CoffeeMail\Exceptions\PaymentRequiredError;
-use CoffeeMail\Exceptions\RateLimitError;
-use CoffeeMail\Exceptions\ValidationError;
 use CoffeeMail\I18n\I18n;
+use CoffeeMail\Version;
 
 final class CurlTransport implements HttpTransportInterface
 {
     private const BASE_URL = 'https://api.coffeemail.com.br';
-    private const SDK_VERSION = '0.1.0';
 
     public function __construct(
         private readonly string $apiKey,
@@ -58,11 +49,14 @@ final class CurlTransport implements HttpTransportInterface
 
         $formattedHeaders = [
             'Authorization: Bearer ' . $this->apiKey,
-            'Content-Type: application/json',
             'Accept: application/json',
             'Accept-Language: ' . $this->locale,
-            'User-Agent: coffeemail-php/' . self::SDK_VERSION,
+            'User-Agent: coffeemail-php/' . Version::VALUE,
         ];
+
+        if ($body !== null) {
+            $formattedHeaders[] = 'Content-Type: application/json';
+        }
 
         foreach ($headers as $key => $value) {
             $formattedHeaders[] = $key . ': ' . $value;
@@ -127,25 +121,7 @@ final class CurlTransport implements HttpTransportInterface
         $rawHeaderString = substr($rawResponse, 0, $headerSize);
         $rawBodyString = substr($rawResponse, $headerSize);
 
-        $parsedHeaders = $this->parseHeaders($rawHeaderString);
-
-        if ($statusCode === 204 || trim($rawBodyString) === '') {
-            return new CoffeeMailResponse(data: null, error: null, statusCode: $statusCode);
-        }
-
-        /** @var mixed $parsedJson */
-        $parsedJson = json_decode($rawBodyString, true);
-        if ($parsedJson === null && json_last_error() !== JSON_ERROR_NONE) {
-            $parsedJson = ['message' => $rawBodyString];
-        }
-
-        if ($statusCode >= 400) {
-            $error = $this->createErrorFromResponse($statusCode, $parsedJson, $parsedHeaders);
-
-            return new CoffeeMailResponse(data: null, error: $error, statusCode: $statusCode);
-        }
-
-        return new CoffeeMailResponse(data: $parsedJson, error: null, statusCode: $statusCode);
+        return ResponseParser::parse($statusCode, $rawBodyString, $this->parseHeaders($rawHeaderString), $this->locale);
     }
 
     public function get(string $path, array $query = [], array $headers = []): CoffeeMailResponse
@@ -171,45 +147,6 @@ final class CurlTransport implements HttpTransportInterface
     public function delete(string $path, array $query = [], array $headers = []): CoffeeMailResponse
     {
         return $this->request('DELETE', $path, null, $query, $headers);
-    }
-
-    /**
-     * @param array<string, string> $headers
-     */
-    private function createErrorFromResponse(int $status, mixed $payload, array $headers): CoffeeMailException
-    {
-        $message = I18n::getMessage('unexpected_error', $this->locale);
-        $details = null;
-
-        if (is_array($payload)) {
-            if (isset($payload['error']) && is_array($payload['error'])) {
-                /** @var array<string, mixed> $errObj */
-                $errObj = $payload['error'];
-                if (isset($errObj['message']) && is_string($errObj['message'])) {
-                    $message = $errObj['message'];
-                }
-                $details = $errObj['details'] ?? null;
-            }
-            if (!isset($payload['error']) && isset($payload['message']) && is_string($payload['message'])) {
-                $message = $payload['message'];
-                $details = $payload['details'] ?? null;
-            }
-        }
-
-        return match ($status) {
-            400 => new ValidationError($message, $details),
-            401 => new AuthenticationError($message, $details),
-            402 => new PaymentRequiredError($message, $details),
-            403 => new ForbiddenError($message, $details),
-            404 => new NotFoundError($message, $details),
-            409 => new ConflictError($message, $details),
-            429 => new RateLimitError(
-                message: $message,
-                retryAfterSeconds: isset($headers['retry-after']) ? (int) $headers['retry-after'] : null,
-                details: $details,
-            ),
-            default => new InternalServerError($message, $details),
-        };
     }
 
     /**

@@ -51,3 +51,6 @@ jobs:
 
       - name: Code standards (sem else/elseif/switch)
         run: composer check:standards
+
+      - name: Versão sincronizada (Version::VALUE e CHANGELOG)
+        run: composer check:version

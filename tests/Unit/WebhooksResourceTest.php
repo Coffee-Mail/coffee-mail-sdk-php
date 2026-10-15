@@ -6,30 +6,76 @@ use CoffeeMail\CoffeeMail;
 use CoffeeMail\Http\CoffeeMailResponse;
 use CoffeeMail\Resources\Webhooks;
 use CoffeeMail\Tests\Support\FakeTransport;
+use CoffeeMail\Webhooks\WebhookVerifier;
 
-test('webhooks verifySignature validates authentic signatures and rejects tampering', function (): void {
-    $secret = 'whsec_test_secret_key_123';
-    $payload = '{"event":"email.delivered","data":{"id":"eml_123"}}';
+test('verifySignature matches the shared API vectors', function (): void {
+    /** @var array{vectors: list<array{name: string, secret: string, body: string, timestamp: string,
+     *     idempotencyKey: string, signature: string, nowEpochSeconds: int, toleranceSeconds: int,
+     *     expected: bool}>} $file */
+    $file = json_decode((string) file_get_contents(__DIR__ . '/../Fixtures/webhook-vectors.json'), true);
 
-    $validSignature = hash_hmac('sha256', $payload, $secret);
+    expect($file['vectors'])->toHaveCount(11);
 
-    // Assinatura legítima
-    expect(Webhooks::verifySignature($payload, $validSignature, $secret))->toBeTrue();
+    foreach ($file['vectors'] as $vector) {
+        $valid = Webhooks::verifySignature(
+            payload: $vector['body'],
+            secret: $vector['secret'],
+            signature: $vector['signature'],
+            timestamp: $vector['timestamp'],
+            idempotencyKey: $vector['idempotencyKey'],
+            toleranceSeconds: $vector['toleranceSeconds'],
+            now: $vector['nowEpochSeconds'],
+        );
 
-    // Assinatura adulterada
-    expect(Webhooks::verifySignature($payload, 'assinatura_invalida_adulterada', $secret))->toBeFalse();
+        expect($valid)->toBe($vector['expected'], $vector['name']);
+    }
+});
 
-    // Payload adulterado
-    $tamperedPayload = '{"event":"email.bounced","data":{"id":"eml_123"}}';
-    expect(Webhooks::verifySignature($tamperedPayload, $validSignature, $secret))->toBeFalse();
+test('verifySignature reads the x-webhook-* headers in any case and as lists', function (): void {
+    $payload = '{"event_type":"email.delivered","webhook_id":"w1","data":{}}';
+    $signature = WebhookVerifier::sign($payload, 'whsec_x', '1760000000', 'ed4e7012eb856296');
 
-    // Secret divergente
-    expect(Webhooks::verifySignature($payload, $validSignature, 'whsec_outro_segredo'))->toBeFalse();
+    $headers = [
+        'X-Webhook-Signature' => [$signature],
+        'x-webhook-timestamp' => '1760000000',
+        'X-WEBHOOK-IDEMPOTENCY-KEY' => ['ed4e7012eb856296'],
+    ];
 
-    // Entradas vazias
-    expect(Webhooks::verifySignature('', $validSignature, $secret))->toBeFalse()
-        ->and(Webhooks::verifySignature($payload, '', $secret))->toBeFalse()
-        ->and(Webhooks::verifySignature($payload, $validSignature, ''))->toBeFalse();
+    expect(Webhooks::verifySignature($payload, 'whsec_x', $headers, now: 1760000100))->toBeTrue()
+        ->and(Webhooks::verifySignature($payload, 'whsec_y', $headers, now: 1760000100))->toBeFalse()
+        ->and(Webhooks::verifySignature($payload . ' ', 'whsec_x', $headers, now: 1760000100))->toBeFalse();
+});
+
+test('verifySignature rejects missing headers, empty secret and stale timestamps', function (): void {
+    $payload = '{}';
+    $signature = WebhookVerifier::sign($payload, 'whsec_x', '1760000000', 'k1');
+
+    expect(Webhooks::verifySignature($payload, 'whsec_x', ['x-webhook-signature' => $signature], now: 1760000000))
+        ->toBeFalse()
+        ->and(Webhooks::verifySignature(
+            $payload,
+            '',
+            signature: $signature,
+            timestamp: '1760000000',
+            idempotencyKey: 'k1',
+            now: 1760000000,
+        ))->toBeFalse()
+        ->and(Webhooks::verifySignature(
+            $payload,
+            'whsec_x',
+            signature: $signature,
+            timestamp: '1760000000',
+            idempotencyKey: 'k1',
+        ))->toBeFalse()
+        ->and(Webhooks::verifySignature(
+            $payload,
+            'whsec_x',
+            signature: $signature,
+            timestamp: '1760000000',
+            idempotencyKey: 'k1',
+            toleranceSeconds: 10,
+            now: 1760000011,
+        ))->toBeFalse();
 });
 
 test('webhooks resource handles full lifecycle CRUD, toggle, rotateSecret, test and deliveries', function (): void {
@@ -59,7 +105,7 @@ test('webhooks resource handles full lifecycle CRUD, toggle, rotateSecret, test 
         ->and($mockTransport->lastPath)->toBe('/v1/product/webhooks/wh_123');
 
     $client->webhooks->update('wh_123', ['events' => ['email.clicked']]);
-    expect($mockTransport->lastMethod)->toBe('PATCH')
+    expect($mockTransport->lastMethod)->toBe('PUT')
         ->and($mockTransport->lastPath)->toBe('/v1/product/webhooks/wh_123');
 
     $client->webhooks->toggle('wh_123', false);

@@ -55,20 +55,42 @@ test('complementary resources route properly to their corresponding REST endpoin
     expect($mockTransport->lastMethod)->toBe('POST')
         ->and($mockTransport->lastPath)->toBe('/v1/product/audiences');
 
-    $client->audiences->addContact('aud_123', ['email' => 'vip@gmail.com']);
+    $client->audiences->update('aud_123', ['active' => false]);
+    expect($mockTransport->lastMethod)->toBe('PUT')
+        ->and($mockTransport->lastPath)->toBe('/v1/product/audiences/aud_123');
+
+    $client->audiences->contacts->create('aud_123', ['email' => 'vip@gmail.com', 'firstName' => 'Ana']);
     expect($mockTransport->lastMethod)->toBe('POST')
         ->and($mockTransport->lastPath)->toBe('/v1/product/audiences/aud_123/contacts');
 
-    $client->audiences->bulkAddContacts('aud_123', [['email' => 'vip2@gmail.com']]);
-    expect($mockTransport->lastMethod)->toBe('POST')
-        ->and($mockTransport->lastPath)->toBe('/v1/product/audiences/aud_123/contacts/bulk');
+    $client->audiences->contacts->list('aud_123', ['limit' => 20, 'offset' => 40]);
+    expect($mockTransport->lastMethod)->toBe('GET')
+        ->and($mockTransport->lastQuery)->toBe(['limit' => 20, 'offset' => 40]);
 
-    $client->audiences->removeContact('aud_123', 'cnt_456');
+    $client->audiences->contacts->bulkAdd('aud_123', [['email' => 'vip2@gmail.com']]);
+    expect($mockTransport->lastMethod)->toBe('POST')
+        ->and($mockTransport->lastPath)->toBe('/v1/product/audiences/aud_123/contacts/bulk')
+        ->and($mockTransport->lastBody)->toBe(['contacts' => [['email' => 'vip2@gmail.com']]]);
+
+    $client->audiences->contacts->update('aud_123', 'cnt_456', ['firstName' => 'Ana']);
+    expect($mockTransport->lastMethod)->toBe('PUT')
+        ->and($mockTransport->lastPath)->toBe('/v1/product/audiences/aud_123/contacts/cnt_456');
+
+    $client->audiences->contacts->delete('aud_123', 'cnt_456');
     expect($mockTransport->lastMethod)->toBe('DELETE')
         ->and($mockTransport->lastPath)->toBe('/v1/product/audiences/aud_123/contacts/cnt_456');
 
+    $client->audiences->createContact('aud_123', ['email' => 'vip3@gmail.com']);
+    expect($mockTransport->lastPath)->toBe('/v1/product/audiences/aud_123/contacts');
+
+    $client->audiences->listContacts('aud_123');
+    expect($mockTransport->lastMethod)->toBe('GET');
+
+    $client->audiences->bulkAddContacts('aud_123', [['email' => 'vip4@gmail.com']]);
+    expect($mockTransport->lastBody)->toBe(['contacts' => [['email' => 'vip4@gmail.com']]]);
+
     // Broadcasts
-    $client->broadcasts->create(['name' => 'Campanha Black Friday', 'audienceId' => 'aud_123']);
+    $client->broadcasts->create(['audienceId' => 'aud_123', 'fromEmail' => 'news@exemplo.com.br']);
     expect($mockTransport->lastMethod)->toBe('POST')
         ->and($mockTransport->lastPath)->toBe('/v1/product/broadcasts');
 
@@ -81,20 +103,23 @@ test('complementary resources route properly to their corresponding REST endpoin
         ->and($mockTransport->lastPath)->toBe('/v1/product/broadcasts/bc_123/cancel');
 
     // Suppressions
-    $client->suppressions->create(['email' => 'bounce@gmail.com', 'reason' => 'hard_bounce']);
+    $client->suppressions->create(['email' => 'bounce@gmail.com', 'reason' => 'bounce']);
     expect($mockTransport->lastMethod)->toBe('POST')
         ->and($mockTransport->lastPath)->toBe('/v1/product/suppressions');
 
-    $client->suppressions->get('bounce@gmail.com');
+    $client->suppressions->get('sup_123');
     expect($mockTransport->lastMethod)->toBe('GET')
-        ->and($mockTransport->lastPath)->toBe('/v1/product/suppressions/bounce%40gmail.com');
+        ->and($mockTransport->lastPath)->toBe('/v1/product/suppressions/sup_123');
 
-    $client->suppressions->delete('bounce@gmail.com');
+    $client->suppressions->delete('sup_123');
     expect($mockTransport->lastMethod)->toBe('DELETE')
-        ->and($mockTransport->lastPath)->toBe('/v1/product/suppressions/bounce%40gmail.com');
+        ->and($mockTransport->lastPath)->toBe('/v1/product/suppressions/sup_123');
+
+    $client->senders->create('ana@exemplo.com.br');
+    expect($mockTransport->lastBody)->toBe(['email' => 'ana@exemplo.com.br']);
 
     // Stats
-    $client->stats->get(['from' => '2026-01-01', 'to' => '2026-01-31']);
+    $client->stats->get(['startDate' => '2026-01-01', 'endDate' => '2026-01-31']);
     expect($mockTransport->lastMethod)->toBe('GET')
         ->and($mockTransport->lastPath)->toBe('/v1/product/stats');
 });

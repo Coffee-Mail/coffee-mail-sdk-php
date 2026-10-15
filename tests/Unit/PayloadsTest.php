@@ -81,13 +81,15 @@ test('DomainPayload and WebhookPayload convert properly to array', function (): 
     $webhook = WebhookPayload::create(
         url: 'https://api.empresa.com.br/hooks',
         events: ['email.delivered', 'email.bounced'],
-        name: 'Hooks Primários',
+        description: 'Hooks primários',
     );
     expect($webhook->toArray())->toBe([
         'url' => 'https://api.empresa.com.br/hooks',
         'events' => ['email.delivered', 'email.bounced'],
-        'name' => 'Hooks Primários',
-    ]);
+        'description' => 'Hooks primários',
+    ])
+        ->and(WebhookPayload::create('https://x.com', ['email.sent'])->toArray())
+        ->toBe(['url' => 'https://x.com', 'events' => ['email.sent']]);
 });
 
 test('Emails resource accepts EmailPayload in send and sendBatch', function (): void {
@@ -121,4 +123,26 @@ test('Emails resource accepts EmailPayload in send and sendBatch', function (): 
     $client->emails->sendBatch([$payload]);
     assert(isset($mockTransport->lastBody[0]) && is_array($mockTransport->lastBody[0]));
     expect($mockTransport->lastBody[0]['subject'])->toBe('Teste DTO');
+});
+
+test('EmailPayload with templateId omits subject and carries the A2 fields', function (): void {
+    $payload = EmailPayload::create(
+        from: 'no-reply@exemplo.com.br',
+        to: 'cliente@gmail.com',
+        templateId: '6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b',
+        variables: ['nome' => 'Ana'],
+        metadata: ['pedido' => 42],
+        emailType: 'transactional',
+        suppressionCategory: 'pedidos',
+    );
+
+    expect($payload->toArray())->toBe([
+        'from' => 'no-reply@exemplo.com.br',
+        'to' => 'cliente@gmail.com',
+        'templateId' => '6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b',
+        'variables' => ['nome' => 'Ana'],
+        'metadata' => ['pedido' => 42],
+        'emailType' => 'transactional',
+        'suppressionCategory' => 'pedidos',
+    ]);
 });

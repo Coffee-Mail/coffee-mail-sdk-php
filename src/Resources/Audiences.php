@@ -9,9 +9,12 @@ use CoffeeMail\Http\HttpTransportInterface;
 
 final class Audiences
 {
+    public readonly Contacts $contacts;
+
     public function __construct(
         private readonly HttpTransportInterface $http,
     ) {
+        $this->contacts = new Contacts($http);
     }
 
     /**
@@ -47,6 +50,17 @@ final class Audiences
     }
 
     /**
+     * Altera nome, descrição ou estado de uma audiência.
+     *
+     * @param array<string, mixed> $payload
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function update(string $id, array $payload): CoffeeMailResponse
+    {
+        return $this->http->put('/v1/product/audiences/' . rawurlencode($id), $payload);
+    }
+
+    /**
      * Exclui uma audiência e todos os seus contatos associados.
      *
      * @return CoffeeMailResponse<mixed>
@@ -57,50 +71,35 @@ final class Audiences
     }
 
     /**
-     * Lista contatos de uma audiência de forma paginada.
+     * Atalho para `contacts->list()`.
      *
      * @param array<string, mixed> $query
      * @return CoffeeMailResponse<mixed>
      */
     public function listContacts(string $audienceId, array $query = []): CoffeeMailResponse
     {
-        return $this->http->get('/v1/product/audiences/' . rawurlencode($audienceId) . '/contacts', $query);
+        return $this->contacts->list($audienceId, $query);
     }
 
     /**
-     * Adiciona um contato individual a uma audiência.
+     * Atalho para `contacts->create()`.
      *
      * @param array<string, mixed> $payload
      * @return CoffeeMailResponse<mixed>
      */
-    public function addContact(string $audienceId, array $payload): CoffeeMailResponse
+    public function createContact(string $audienceId, array $payload): CoffeeMailResponse
     {
-        return $this->http->post('/v1/product/audiences/' . rawurlencode($audienceId) . '/contacts', $payload);
+        return $this->contacts->create($audienceId, $payload);
     }
 
     /**
-     * Adiciona múltiplos contatos a uma audiência em lote (bulk).
+     * Atalho para `contacts->bulkAdd()`.
      *
      * @param list<array<string, mixed>> $contacts
      * @return CoffeeMailResponse<mixed>
      */
     public function bulkAddContacts(string $audienceId, array $contacts): CoffeeMailResponse
     {
-        /** @var list<mixed> $rawList */
-        $rawList = $contacts;
-
-        return $this->http->post('/v1/product/audiences/' . rawurlencode($audienceId) . '/contacts/bulk', $rawList);
-    }
-
-    /**
-     * Remove um contato de uma audiência.
-     *
-     * @return CoffeeMailResponse<mixed>
-     */
-    public function removeContact(string $audienceId, string $contactId): CoffeeMailResponse
-    {
-        return $this->http->delete(
-            '/v1/product/audiences/' . rawurlencode($audienceId) . '/contacts/' . rawurlencode($contactId),
-        );
+        return $this->contacts->bulkAdd($audienceId, $contacts);
     }
 }

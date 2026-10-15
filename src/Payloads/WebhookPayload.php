@@ -12,7 +12,6 @@ final class WebhookPayload implements PayloadInterface
     public function __construct(
         public readonly string $url,
         public readonly array $events,
-        public readonly ?string $name = null,
         public readonly ?string $description = null,
     ) {
     }
@@ -20,13 +19,9 @@ final class WebhookPayload implements PayloadInterface
     /**
      * @param list<string> $events
      */
-    public static function create(
-        string $url,
-        array $events,
-        ?string $name = null,
-        ?string $description = null,
-    ): self {
-        return new self($url, $events, $name, $description);
+    public static function create(string $url, array $events, ?string $description = null): self
+    {
+        return new self($url, $events, $description);
     }
 
     /**
@@ -34,19 +29,10 @@ final class WebhookPayload implements PayloadInterface
      */
     public function toArray(): array
     {
-        $data = [
+        return [
             'url' => $this->url,
             'events' => $this->events,
+            ...($this->description !== null ? ['description' => $this->description] : []),
         ];
-
-        if ($this->name !== null) {
-            $data['name'] = $this->name;
-        }
-
-        if ($this->description !== null) {
-            $data['description'] = $this->description;
-        }
-
-        return $data;
     }
 }

@@ -4,12 +4,20 @@ declare(strict_types=1);
 
 namespace CoffeeMail\Resources;
 
-use CoffeeMail\Exceptions\ValidationError;
+use CoffeeMail\Exceptions\ForbiddenError;
+use CoffeeMail\Exceptions\PermissionError;
 use CoffeeMail\Http\CoffeeMailResponse;
 use CoffeeMail\Http\HttpTransportInterface;
+use CoffeeMail\I18n\I18n;
 
+/**
+ * Campanhas. Toda operação exige chave `full_access`; sem ela, o erro é `PermissionError`.
+ */
 final class Broadcasts
 {
+    private const FULL_ACCESS = 'full_access';
+    private const BASE_PATH = '/v1/product/broadcasts';
+
     public function __construct(
         private readonly HttpTransportInterface $http,
     ) {
@@ -23,7 +31,7 @@ final class Broadcasts
      */
     public function create(array $payload): CoffeeMailResponse
     {
-        return $this->http->post('/v1/product/broadcasts', $payload);
+        return $this->guard('broadcasts.create', $this->http->post(self::BASE_PATH, $payload));
     }
 
     /**
@@ -34,7 +42,7 @@ final class Broadcasts
      */
     public function list(array $query = []): CoffeeMailResponse
     {
-        return $this->http->get('/v1/product/broadcasts', $query);
+        return $this->guard('broadcasts.list', $this->http->get(self::BASE_PATH, $query));
     }
 
     /**
@@ -44,7 +52,7 @@ final class Broadcasts
      */
     public function get(string $id): CoffeeMailResponse
     {
-        return $this->http->get('/v1/product/broadcasts/' . rawurlencode($id));
+        return $this->guard('broadcasts.get', $this->http->get(self::BASE_PATH . '/' . rawurlencode($id)));
     }
 
     /**
@@ -54,7 +62,7 @@ final class Broadcasts
      */
     public function send(string $id): CoffeeMailResponse
     {
-        return $this->http->post('/v1/product/broadcasts/' . rawurlencode($id) . '/send');
+        return $this->guard('broadcasts.send', $this->http->post(self::BASE_PATH . '/' . rawurlencode($id) . '/send'));
     }
 
     /**
@@ -64,27 +72,9 @@ final class Broadcasts
      */
     public function cancel(string $id): CoffeeMailResponse
     {
-        return $this->http->post('/v1/product/broadcasts/' . rawurlencode($id) . '/cancel');
-    }
-
-    /**
-     * @deprecated A API CoffeeMail não expõe exclusão de campanha. Use cancel().
-     *
-     * Mantido apenas para não quebrar a assinatura pública. Falha imediatamente,
-     * sem chamada de rede, em vez de devolver um 404 que sugere campanha inexistente.
-     *
-     * @return CoffeeMailResponse<mixed>
-     */
-    public function delete(string $id): CoffeeMailResponse
-    {
-        unset($id);
-
-        return new CoffeeMailResponse(
-            data: null,
-            error: new ValidationError(
-                'Exclusão de campanha não é suportada pela API CoffeeMail. Use cancel().'
-            ),
-            statusCode: 0,
+        return $this->guard(
+            'broadcasts.cancel',
+            $this->http->post(self::BASE_PATH . '/' . rawurlencode($id) . '/cancel'),
         );
     }
 
@@ -96,9 +86,38 @@ final class Broadcasts
      */
     public function testSend(string $id, array $payload): CoffeeMailResponse
     {
-        return $this->http->post(
-            '/v1/product/broadcasts/' . rawurlencode($id) . '/test-send',
-            $payload
+        return $this->guard(
+            'broadcasts.testSend',
+            $this->http->post(self::BASE_PATH . '/' . rawurlencode($id) . '/test-send', $payload),
+        );
+    }
+
+    /**
+     * @param CoffeeMailResponse<mixed> $response
+     * @return CoffeeMailResponse<mixed>
+     */
+    private function guard(string $operation, CoffeeMailResponse $response): CoffeeMailResponse
+    {
+        $error = $response->error;
+        if (!$error instanceof ForbiddenError) {
+            return $response;
+        }
+
+        $message = I18n::getMessage('permission_denied', $this->http->getLocale(), [
+            'requiredPermission' => self::FULL_ACCESS . ' (called by ' . $operation . ')',
+        ]);
+
+        return new CoffeeMailResponse(
+            data: null,
+            error: new PermissionError(
+                message: $message,
+                requiredPermission: self::FULL_ACCESS,
+                details: array_merge($error->details, ['operation' => $operation]),
+                previous: $error,
+                apiCode: $error->apiCode,
+                requestId: $error->requestId,
+            ),
+            statusCode: $response->statusCode,
         );
     }
 }

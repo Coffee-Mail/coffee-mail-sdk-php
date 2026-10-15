@@ -21,7 +21,7 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-main": "0.1.x-dev"
+            "dev-main": "0.2.x-dev"
         }
     },
     "autoload": {
@@ -49,9 +49,11 @@
             "@lint",
             "@analyse",
             "@test",
-            "@check:standards"
+            "@check:standards",
+            "@check:version"
         ],
-        "check:standards": "php scripts/check-standards.php"
+        "check:standards": "php scripts/check-standards.php",
+        "check:version": "php scripts/check-version-sync.php"
     },
     "minimum-stability": "stable",
     "prefer-stable": true

@@ -21,11 +21,11 @@ final class Senders
      *
      * @return CoffeeMailResponse<mixed>
      */
-    public function create(string $email, string $displayName): CoffeeMailResponse
+    public function create(string $email, ?string $displayName = null): CoffeeMailResponse
     {
         return $this->http->post('/v1/product/senders', [
             'email' => $email,
-            'displayName' => $displayName,
+            ...($displayName !== null ? ['displayName' => $displayName] : []),
         ]);
     }
 

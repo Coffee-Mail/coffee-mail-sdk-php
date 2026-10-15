@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use CoffeeMail\CoffeeMail;
+use CoffeeMail\Exceptions\ValidationError;
 use CoffeeMail\Http\CoffeeMailResponse;
 use CoffeeMail\Tests\Support\FakeTransport;
 
@@ -108,9 +109,67 @@ test('emails resource exposes batch, get, list, cancel, resend, tags and events 
         ->and($mockTransport->lastPath)->toBe('/v1/product/emails/eml_123/resend');
 
     $client->emails->sendBatch([
-        ['from' => 'a@b.com', 'to' => 'c@d.com', 'subject' => 'S1'],
-        ['from' => 'a@b.com', 'to' => 'e@f.com', 'subject' => 'S2'],
+        ['from' => 'a@b.com', 'to' => 'c@d.com', 'subject' => 'S1', 'text' => 'T1'],
+        ['from' => 'a@b.com', 'to' => 'e@f.com', 'subject' => 'S2', 'text' => 'T2'],
     ]);
     expect($mockTransport->lastMethod)->toBe('POST')
         ->and($mockTransport->lastPath)->toBe('/v1/product/emails/batch');
+});
+
+test('emails send forwards metadata, emailType and suppressionCategory, also in batch', function (): void {
+    $mockTransport = new FakeTransport();
+    $client = new CoffeeMail('cm_live_dummy', transport: $mockTransport);
+    $email = [
+        'from' => 'no-reply@exemplo.com.br',
+        'to' => 'cliente@gmail.com',
+        'subject' => 'Pedido',
+        'text' => 'Seu pedido saiu.',
+        'metadata' => ['pedido' => 42],
+        'emailType' => 'transactional',
+        'suppressionCategory' => 'pedidos',
+    ];
+
+    $client->emails->send($email);
+    expect($mockTransport->lastBody)->toMatchArray([
+        'metadata' => ['pedido' => 42],
+        'emailType' => 'transactional',
+        'suppressionCategory' => 'pedidos',
+    ]);
+
+    $client->emails->sendBatch([$email]);
+    $first = is_array($mockTransport->lastBody) ? ($mockTransport->lastBody[0] ?? null) : null;
+    expect($first)->toMatchArray(['metadata' => ['pedido' => 42], 'emailType' => 'transactional']);
+});
+
+test('emails send with templateId does not require subject', function (): void {
+    $mockTransport = new FakeTransport();
+    $client = new CoffeeMail('cm_live_dummy', transport: $mockTransport);
+
+    $client->emails->send([
+        'from' => 'no-reply@exemplo.com.br',
+        'to' => 'cliente@gmail.com',
+        'templateId' => '6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b',
+        'variables' => ['nome' => 'Ana'],
+    ]);
+
+    expect($mockTransport->lastBody)->not->toHaveKey('subject')
+        ->and($mockTransport->lastBody)->toMatchArray(['templateId' => '6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b']);
+});
+
+test('emails send rejects content without subject and template mixed with html', function (): void {
+    $mockTransport = new FakeTransport();
+    $client = new CoffeeMail('cm_live_dummy', transport: $mockTransport);
+    $base = ['from' => 'no-reply@exemplo.com.br', 'to' => 'cliente@gmail.com'];
+
+    expect(fn () => $client->emails->send([...$base, 'html' => '<p>Oi</p>']))
+        ->toThrow(ValidationError::class, 'subject')
+        ->and(fn () => $client->emails->send([
+            ...$base,
+            'subject' => 'Oi',
+            'html' => '<p>Oi</p>',
+            'templateId' => '6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b',
+        ]))->toThrow(ValidationError::class, 'não os dois')
+        ->and(fn () => $client->emails->send([...$base, 'subject' => 'Sem corpo']))
+        ->toThrow(ValidationError::class, 'não os dois')
+        ->and($mockTransport->history)->toBe([]);
 });

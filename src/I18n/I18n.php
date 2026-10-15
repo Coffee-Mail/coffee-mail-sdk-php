@@ -40,8 +40,18 @@ final class I18n
             'en' => 'Invalid webhook signature or secret mismatch.',
         ],
         'permission_denied' => [
-            'pt-BR' => 'Esta chave de API não possui permissão para executar esta operação.',
-            'en' => 'This API key lacks the required permission for this operation.',
+            'pt-BR' => 'Esta chave de API não possui a permissão necessária ({requiredPermission}) para executar esta'
+                . " operação. Crie uma chave com permissão 'full_access' no dashboard.",
+            'en' => 'This API key lacks the required permission ({requiredPermission}) for this operation.'
+                . " Create a key with 'full_access' permission in the dashboard.",
+        ],
+        'invalid_json' => [
+            'pt-BR' => 'A resposta do servidor não pôde ser interpretada como JSON válido.',
+            'en' => 'The server response could not be parsed as valid JSON.',
+        ],
+        'rate_limit_exceeded' => [
+            'pt-BR' => 'Limite de requisições excedido (Rate Limit). Tente novamente em alguns segundos.',
+            'en' => 'Rate limit exceeded. Please retry in a few moments.',
         ],
     ];
 

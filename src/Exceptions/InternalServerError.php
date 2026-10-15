@@ -8,17 +8,25 @@ use Throwable;
 
 final class InternalServerError extends CoffeeMailException
 {
+    /**
+     * @param array<string, mixed> $details
+     */
     public function __construct(
         string $message = 'Erro interno do servidor da API.',
-        mixed $details = null,
+        array $details = [],
         ?Throwable $previous = null,
+        ?string $apiCode = null,
+        ?string $requestId = null,
+        int $status = 500,
     ) {
         parent::__construct(
             message: $message,
-            status: 500,
-            errorCode: 'INTERNAL_ERROR',
+            status: $status,
+            errorCode: ErrorCodes::INTERNAL_SERVER_ERROR,
             details: $details,
             previous: $previous,
+            apiCode: $apiCode,
+            requestId: $requestId,
         );
     }
 }
