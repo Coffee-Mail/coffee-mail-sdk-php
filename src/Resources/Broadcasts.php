@@ -24,7 +24,8 @@ final class Broadcasts
     }
 
     /**
-     * Cria uma nova campanha (broadcast) para disparo em massa.
+     * Cria uma nova campanha (broadcast) para disparo em massa. `scheduledAt`
+     * (ISO 8601, no futuro) agenda o envio: a campanha nasce `scheduled`.
      *
      * @param array<string, mixed> $payload
      * @return CoffeeMailResponse<mixed>
@@ -46,7 +47,7 @@ final class Broadcasts
     }
 
     /**
-     * Obtém os detalhes de uma campanha pelo ID.
+     * Obtém os detalhes de uma campanha pelo ID, com `metrics` de entrega.
      *
      * @return CoffeeMailResponse<mixed>
      */
@@ -56,7 +57,8 @@ final class Broadcasts
     }
 
     /**
-     * Dispara o envio imediato da campanha para a audiência vinculada.
+     * Enfileira o envio da campanha para a audiência vinculada. A resposta volta
+     * com `status` `sending`; o progresso acompanha-se por `get()`.
      *
      * @return CoffeeMailResponse<mixed>
      */

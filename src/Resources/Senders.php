@@ -17,7 +17,8 @@ final class Senders
     }
 
     /**
-     * Cadastra um remetente e dispara o e-mail de verificação.
+     * Cadastra um remetente e dispara o e-mail de verificação. O token segue por
+     * e-mail ao próprio endereço e não aparece na resposta.
      *
      * @return CoffeeMailResponse<mixed>
      */
@@ -47,6 +48,16 @@ final class Senders
     public function verify(string $token): CoffeeMailResponse
     {
         return $this->http->post('/v1/product/senders/verify', ['token' => $token]);
+    }
+
+    /**
+     * Reenvia o e-mail de verificação com um token novo (o anterior expira).
+     *
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function resendVerification(string $id): CoffeeMailResponse
+    {
+        return $this->http->post('/v1/product/senders/' . rawurlencode($id) . '/resend-verification');
     }
 
     /**
