@@ -295,6 +295,9 @@ No formato array, um anexo aceita `filename`, `content`, `contentType` (default 
 | `delete(string $id)` | `DELETE /v1/product/domains/{id}` | 0.1.0 |
 | `getHealth(string $id)` | `POST /v1/product/domains/{id}/health` | main |
 | `getWarmupStatus(string $id)` | `GET /v1/product/domains/{id}/warmup` | main |
+| `rotateDkim(string $id)` | `POST /v1/product/domains/{id}/dkim/rotate` | main |
+| `setTrackingDomain(string $id, string $host)` | `PUT /v1/product/domains/{id}/tracking-domain` | main |
+| `removeTrackingDomain(string $id)` | `DELETE /v1/product/domains/{id}/tracking-domain` | main |
 
 ```php
 use CoffeeMail\Payloads\DomainPayload;
@@ -302,6 +305,17 @@ use CoffeeMail\Payloads\DomainPayload;
 [$domain, $error] = $client->domains->create(DomainPayload::create('seudominio.com.br'));
 [$check, $error] = $client->domains->verify($domain['id']);
 ```
+
+`get()` traz, além dos registros DNS, `dkimRotation` (rotação pendente ou `null`), `returnPath` e `trackingDomain` (`{host, target, verified, verifiedAt, record}` ou `null`) e `trackingDomainsAvailable` (o plano permite domínio de rastreamento próprio). `getWarmupStatus()` devolve `null` sem aquecimento; com aquecimento, traz `status` (`warming` ou `completed`), `currentDay`, `totalDays`, `dailyQuota`, `sentToday`, `remainingToday`, `quotaUsedPercent`, `lastSendDate`, `startedAt` e `completedAt`.
+
+```php
+[$rotation, $error] = $client->domains->rotateDkim($domain['id']);
+$record = $rotation['record'];
+
+[$tracking, $error] = $client->domains->setTrackingDomain($domain['id'], 'links.seudominio.com.br');
+```
+
+`rotateDkim()` é idempotente: com uma rotação pendente, devolve a mesma. Publique `record` no DNS; a chave em uso só muda depois que o novo seletor propaga. Falha com `NotFoundError` (`apiCode` `DOMAIN_NOT_FOUND`) ou `ConflictError` (`DOMAIN_NOT_VERIFIED`). `setTrackingDomain()` devolve o CNAME a publicar e falha com `ValidationError` (`INVALID_TRACKING_HOST`), `ConflictError` (`TRACKING_DOMAINS_DISABLED`) ou `NotFoundError`.
 
 ### Remetentes — `$client->senders` (_não publicado_)
 

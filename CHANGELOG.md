@@ -6,6 +6,9 @@ Todas as mudanças relevantes deste projeto são documentadas aqui. O formato se
 
 ### Adicionado
 
+- `domains->rotateDkim($id)` inicia a rotação da chave DKIM (idempotente) e devolve `domainId`, `selector`, `startedAt` e o `record` a publicar.
+- `domains->setTrackingDomain($id, $host)` e `domains->removeTrackingDomain($id)` configuram o domínio de rastreamento próprio dos links de abertura e clique.
+- Documentação de `domains->get()` cobre `dkimRotation`, `returnPath`, `trackingDomain` e `trackingDomainsAvailable`, e a de `domains->getWarmupStatus()` cobre `status`, `totalDays`, `startedAt` e `completedAt`; os campos já chegam no array de resposta.
 - `senders->resendVerification($id)` reenvia o e-mail de verificação com token novo.
 - Documentação de `broadcasts->create()` cobre `scheduledAt` (ISO 8601, no futuro: a campanha nasce `scheduled`) e de `broadcasts->get()` cobre `metrics`; os campos já trafegavam pelo payload em array.
 
