@@ -9,6 +9,10 @@ Todas as mudanças relevantes deste projeto são documentadas aqui. O formato se
 - `domains->rotateDkim($id)` inicia a rotação da chave DKIM (idempotente) e devolve `domainId`, `selector`, `startedAt` e o `record` a publicar.
 - `domains->setTrackingDomain($id, $host)` e `domains->removeTrackingDomain($id)` configuram o domínio de rastreamento próprio dos links de abertura e clique.
 - Documentação de `domains->get()` cobre `dkimRotation`, `returnPath`, `trackingDomain` e `trackingDomainsAvailable`, e a de `domains->getWarmupStatus()` cobre `status`, `totalDays`, `startedAt` e `completedAt`; os campos já chegam no array de resposta.
+- `templates->listVersions($id, $query)`, `templates->getVersion($id, $version)` e `templates->restoreVersion($id, $version)` para o histórico de versões de template.
+- Recurso `validation` com `validate($emails)`: valida de 1 a 100 endereços e devolve `items`, `validCount`, `invalidCount` e `credits`. Créditos esgotados viram `RateLimitError` com `apiCode` `VALIDATION_CREDITS_EXHAUSTED`.
+- `webhooks->getDelivery($id, $deliveryId)` (entrega com `requestPayload`) e `webhooks->replayDelivery($id, $deliveryId)` (reenfileira e devolve a entrega nova).
+- Documentação de `emails->send()` cobre `templateId` como id ou alias do template; o SDK já repassava o valor sem validar o formato.
 - `senders->resendVerification($id)` reenvia o e-mail de verificação com token novo.
 - Documentação de `broadcasts->create()` cobre `scheduledAt` (ISO 8601, no futuro: a campanha nasce `scheduled`) e de `broadcasts->get()` cobre `metrics`; os campos já trafegavam pelo payload em array.
 

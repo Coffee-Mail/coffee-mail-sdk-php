@@ -135,4 +135,43 @@ final class Templates
             $payload
         );
     }
+
+    /**
+     * Lista o histórico de versões de um modelo, da mais recente para a mais antiga.
+     *
+     * Cada item traz `version`, `name`, `subject`, `createdBy` e `createdAt`; a página
+     * vem em `{ data, total }`.
+     *
+     * @param array<string, mixed> $query Aceita `limit` (1 a 100) e `offset`.
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function listVersions(string $id, array $query = []): CoffeeMailResponse
+    {
+        return $this->http->get('/v1/product/templates/' . rawurlencode($id) . '/versions', $query);
+    }
+
+    /**
+     * Obtém uma versão completa de um modelo (`html`, `contentJson`, `variables`, `format` etc.).
+     *
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function getVersion(string $id, int $version): CoffeeMailResponse
+    {
+        return $this->http->get($this->versionPath($id, $version));
+    }
+
+    /**
+     * Restaura o conteúdo de uma versão anterior e devolve o modelo atualizado.
+     *
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function restoreVersion(string $id, int $version): CoffeeMailResponse
+    {
+        return $this->http->post($this->versionPath($id, $version) . '/restore');
+    }
+
+    private function versionPath(string $id, int $version): string
+    {
+        return '/v1/product/templates/' . rawurlencode($id) . '/versions/' . $version;
+    }
 }

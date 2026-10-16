@@ -27,6 +27,7 @@ class CoffeeMail
 
     public readonly Resources\Suppressions $suppressions;
     public readonly Resources\Stats $stats;
+    public readonly Resources\Validation $validation;
 
     /** @var mixed */
     private mixed $introspectionCache = null;
@@ -67,6 +68,7 @@ class CoffeeMail
         $this->senders = new Resources\Senders($this->transport);
         $this->suppressions = new Resources\Suppressions($this->transport);
         $this->stats = new Resources\Stats($this->transport);
+        $this->validation = new Resources\Validation($this->transport);
     }
 
     public function getApiKey(): string
