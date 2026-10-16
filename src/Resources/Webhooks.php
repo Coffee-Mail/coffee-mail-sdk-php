@@ -115,6 +115,26 @@ final class Webhooks
     }
 
     /**
+     * Obtém uma tentativa de entrega com o `requestPayload` enviado ao endpoint.
+     *
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function getDelivery(string $id, string $deliveryId): CoffeeMailResponse
+    {
+        return $this->http->get($this->deliveryPath($id, $deliveryId));
+    }
+
+    /**
+     * Reenfileira uma entrega já concluída e devolve a entrega nova (HTTP 202).
+     *
+     * @return CoffeeMailResponse<mixed>
+     */
+    public function replayDelivery(string $id, string $deliveryId): CoffeeMailResponse
+    {
+        return $this->http->post($this->deliveryPath($id, $deliveryId) . '/replay');
+    }
+
+    /**
      * Verifica a assinatura de uma entrega de webhook (algoritmo da API: `sha256=` +
      * HMAC-SHA256 de `timestamp.idempotencyKey.corpoBruto`, janela de 300s).
      *
@@ -142,5 +162,10 @@ final class Webhooks
             $toleranceSeconds,
             $now,
         );
+    }
+
+    private function deliveryPath(string $id, string $deliveryId): string
+    {
+        return '/v1/product/webhooks/' . rawurlencode($id) . '/deliveries/' . rawurlencode($deliveryId);
     }
 }

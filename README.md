@@ -234,7 +234,7 @@ Campos de `send()` (array ou `EmailPayload`):
 | `html`, `text` | `?string` | Até 100 KB cada. Use `html`/`text` com `subject` **ou** `templateId`, nunca os dois. |
 | `cc`, `bcc` | como `to` | Até 50 cada. |
 | `replyTo` | `string\|array{email, name?}` | A API aceita um único endereço. |
-| `templateId`, `variables` | `string`, `array` | Envio por template salvo. |
+| `templateId`, `variables` | `string`, `array` | Envio por template salvo: aceita o id ou o alias do template (`^[a-z0-9_-]+$`). |
 | `metadata` | `array<string, mixed>` | Metadados livres, devolvidos nos webhooks. |
 | `emailType` | `'transactional'\|'broadcast'` | Categoria do envio para rastreio e supressão. |
 | `suppressionCategory` | `string` | Categoria usada na checagem da lista de supressão (até 100 caracteres). |
@@ -295,6 +295,9 @@ No formato array, um anexo aceita `filename`, `content`, `contentType` (default 
 | `delete(string $id)` | `DELETE /v1/product/domains/{id}` | 0.1.0 |
 | `getHealth(string $id)` | `POST /v1/product/domains/{id}/health` | main |
 | `getWarmupStatus(string $id)` | `GET /v1/product/domains/{id}/warmup` | main |
+| `rotateDkim(string $id)` | `POST /v1/product/domains/{id}/dkim/rotate` | main |
+| `setTrackingDomain(string $id, string $host)` | `PUT /v1/product/domains/{id}/tracking-domain` | main |
+| `removeTrackingDomain(string $id)` | `DELETE /v1/product/domains/{id}/tracking-domain` | main |
 
 ```php
 use CoffeeMail\Payloads\DomainPayload;
@@ -302,6 +305,17 @@ use CoffeeMail\Payloads\DomainPayload;
 [$domain, $error] = $client->domains->create(DomainPayload::create('seudominio.com.br'));
 [$check, $error] = $client->domains->verify($domain['id']);
 ```
+
+`get()` traz, além dos registros DNS, `dkimRotation` (rotação pendente ou `null`), `returnPath` e `trackingDomain` (`{host, target, verified, verifiedAt, record}` ou `null`) e `trackingDomainsAvailable` (o plano permite domínio de rastreamento próprio). `getWarmupStatus()` devolve `null` sem aquecimento; com aquecimento, traz `status` (`warming` ou `completed`), `currentDay`, `totalDays`, `dailyQuota`, `sentToday`, `remainingToday`, `quotaUsedPercent`, `lastSendDate`, `startedAt` e `completedAt`.
+
+```php
+[$rotation, $error] = $client->domains->rotateDkim($domain['id']);
+$record = $rotation['record'];
+
+[$tracking, $error] = $client->domains->setTrackingDomain($domain['id'], 'links.seudominio.com.br');
+```
+
+`rotateDkim()` é idempotente: com uma rotação pendente, devolve a mesma. Publique `record` no DNS; a chave em uso só muda depois que o novo seletor propaga. Falha com `NotFoundError` (`apiCode` `DOMAIN_NOT_FOUND`) ou `ConflictError` (`DOMAIN_NOT_VERIFIED`). `setTrackingDomain()` devolve o CNAME a publicar e falha com `ValidationError` (`INVALID_TRACKING_HOST`), `ConflictError` (`TRACKING_DOMAINS_DISABLED`) ou `NotFoundError`.
 
 ### Remetentes — `$client->senders` (_não publicado_)
 
@@ -332,6 +346,9 @@ Remetente verificado por endereço, alternativa a verificar o domínio inteiro.
 | `format(array $payload)` | `POST /v1/product/templates/format` | main |
 | `testRender(array $payload)` | `POST /v1/product/templates/test-render` | main |
 | `testSend(string $id, array $payload)` | `POST /v1/product/templates/{id}/test-send` | main |
+| `listVersions(string $id, array $query = [])` | `GET /v1/product/templates/{id}/versions` (`limit` 1–100, `offset`) | main |
+| `getVersion(string $id, int $version)` | `GET /v1/product/templates/{id}/versions/{version}` | main |
+| `restoreVersion(string $id, int $version)` | `POST /v1/product/templates/{id}/versions/{version}/restore` | main |
 
 > Na `v0.1.0`, `preview(string $id, array $variables = [])` chamava `POST /templates/{id}/preview`, endpoint que a API não tem. Em `main` a assinatura passou a ser `preview(array $payload)`; para pré-visualizar um template salvo use `previewById()`.
 
@@ -342,6 +359,13 @@ Remetente verificado por endereço, alternativa a verificar o domínio inteiro.
 ]);
 
 [$preview, $error] = $client->templates->previewById($templateId, ['nome' => 'Ana']);
+```
+
+Histórico de versões: `listVersions()` devolve `{ data, total }`, com `version`, `name`, `subject`, `createdBy` e `createdAt` por item; `getVersion()` traz a versão completa (`templateId`, `preheader`, `html`, `contentJson`, `textPayload`, `variables`, `format`, `sourceLocale`); `restoreVersion()` devolve o template restaurado. Falham com `NotFoundError` (`apiCode` `TEMPLATE_NOT_FOUND` ou `TEMPLATE_VERSION_NOT_FOUND`).
+
+```php
+[$page, $error] = $client->templates->listVersions($templateId, ['limit' => 20]);
+[$template, $error] = $client->templates->restoreVersion($templateId, $page['data'][1]['version']);
 ```
 
 ### Audiências — `$client->audiences`
@@ -418,6 +442,8 @@ Todas exigem chave `full_access`; sem ela, o erro é `PermissionError` (`PERMISS
 | `rotateSecret(string $id)` | `POST /v1/product/webhooks/{id}/rotate-secret` | 0.1.0 |
 | `test(string $id)` | `POST /v1/product/webhooks/{id}/test` | 0.1.0 |
 | `listDeliveries(string $id, array $query = [])` | `GET /v1/product/webhooks/{id}/deliveries` | 0.1.0 |
+| `getDelivery(string $id, string $deliveryId)` | `GET /v1/product/webhooks/{id}/deliveries/{deliveryId}` | main |
+| `replayDelivery(string $id, string $deliveryId)` | `POST /v1/product/webhooks/{id}/deliveries/{deliveryId}/replay` | main |
 | `Webhooks::verifySignature(string $payload, string $secret, array $headers = [], ...)` | local (estático) | 0.2.0 (ver [Webhooks](#-webhooks)) |
 
 ```php
@@ -432,7 +458,21 @@ use CoffeeMail\Payloads\WebhookPayload;
 
 `WebhookPayload` tem só os campos do contrato: `url`, `events` e `description`.
 
+`getDelivery()` traz a entrega com o `requestPayload` enviado. `replayDelivery()` reenfileira a entrega (HTTP 202) e devolve a entrega nova. Erros: `NotFoundError` (`WEBHOOK_NOT_FOUND`, `WEBHOOK_DELIVERY_NOT_FOUND`) e `ConflictError` (`WEBHOOK_DELIVERY_PENDING`, `WEBHOOK_NOT_ACTIVE`).
+
 Eventos aceitos pela API: `email.queued`, `email.processing`, `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.opened`, `email.clicked`, `email.bounced`, `email.complained`, `email.failed`, `email.suppressed`, `email.scheduled`, `email.cancelled`, `email.unsubscribed`, `billing.plan_changed`.
+
+### Validação — `$client->validation`
+
+| Método | Endpoint | Desde |
+| --- | --- | --- |
+| `validate(array $emails)` | `POST /v1/product/validate` (corpo `{ emails }`, de 1 a 100) | main |
+
+```php
+[$result, $error] = $client->validation->validate(['ana@exemplo.com', 'teste@mailinator.com']);
+```
+
+A resposta traz `items` (`email`, `formatValid`, `mxValid`, `isDisposable` e `reason` quando inválido), `validCount`, `invalidCount` e `credits` (`limit` e `remaining` são `null` em plano ilimitado). Cada endereço consome um crédito do mês; esgotados, o erro é `RateLimitError` com `apiCode` `VALIDATION_CREDITS_EXHAUSTED`, que não se resolve com nova tentativa antes da virada do mês.
 
 ### Métricas — `$client->stats`
 
@@ -528,7 +568,7 @@ src/
 ├── I18n/I18n.php               mensagens locais em pt-BR e en
 ├── Payloads/                   EmailPayload, AttachmentPayload, DomainPayload, WebhookPayload
 ├── Resources/                  Emails, Domains, Senders, Templates, Audiences, Contacts,
-│                               Broadcasts, Suppressions, Webhooks, Stats
+│                               Broadcasts, Suppressions, Webhooks, Stats, Validation
 └── Webhooks/WebhookVerifier.php verificação de assinatura de webhook
 tests/
 ├── Fixtures/                   vetores de webhook gerados pelo assinador da API
