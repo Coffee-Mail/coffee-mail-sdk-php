@@ -4,6 +4,16 @@ Todas as mudanças relevantes deste projeto são documentadas aqui. O formato se
 
 ## [Não lançado]
 
+### Adicionado
+
+- `senders->resendVerification($id)` reenvia o e-mail de verificação com token novo.
+- Documentação de `broadcasts->create()` cobre `scheduledAt` (ISO 8601, no futuro: a campanha nasce `scheduled`) e de `broadcasts->get()` cobre `metrics`; os campos já trafegavam pelo payload em array.
+
+### Alterado
+
+- A resposta de `senders->create()` não traz mais `verificationToken`: o token segue por e-mail ao próprio endereço cadastrado.
+- `broadcasts->send()` responde assim que o envio é enfileirado (`status` `sending`); o progresso acompanha-se por `broadcasts->get()`.
+
 ## [0.2.0] - Não publicado
 
 Esta versão corrige o contrato com a API e **quebra a API pública da 0.1.0**. A quebra foi aceita porque ainda não havia usuários ativos; a partir daqui volta a regra de só adicionar e depreciar.
